@@ -2293,7 +2293,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     self.updateStoryUploadProgress(progress)
                 })
                 
-                if case .chatList(.root) = self.location {
+                if case let .chatList(groupId) = self.location, groupId == .root {
                     self.storyArchiveSubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: true)
                     |> deliverOnMainQueue).startStrict(next: { [weak self] rawStoryArchiveSubscriptions in
                         guard let self else {
@@ -6947,6 +6947,7 @@ private final class ChatListLocationContext {
     var leftButton: NavigationBarComponent.Button?
     var rightButton: NavigationBarComponent.Button?
     var settingsButton: NavigationBarComponent.Button? // MARK: Swiftgram
+    var ghostButton: NavigationBarComponent.Button? // MARK: Lumen
     var proxyButton: NavigationBarComponent.Button?
     var storyButton: NavigationBarComponent.Button?
     
@@ -6955,6 +6956,11 @@ private final class ChatListLocationContext {
         // MARK: Swiftgram
         if let settingsButton = self.settingsButton {
             result.append(settingsButton)
+        }
+        //
+        // MARK: Lumen
+        if let ghostButton = self.ghostButton {
+            result.append(ghostButton)
         }
         //
         if let rightButton = self.rightButton {
@@ -7013,6 +7019,22 @@ private final class ChatListLocationContext {
         
         // MARK: Swiftgram
         let hideStoriesSignal = sgSimpleSettingsBoolSignal(.hideStories, defaultValue: false)
+        // MARK: Lumen: re-run the header update when ghost mode is toggled anywhere.
+        let lumenGhostSignal: Signal<Bool, NoError> = Signal { subscriber in
+            subscriber.putNext(LumenSettings.shared.ghostMode)
+            let observer = NotificationCenter.default.addObserver(forName: LumenSettings.didChangeNotification, object: nil, queue: .main, using: { _ in
+                subscriber.putNext(LumenSettings.shared.ghostMode)
+            })
+            return ActionDisposable {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
+        |> distinctUntilChanged
+        let hideStoriesAndGhostSignal: Signal<Bool, NoError> = combineLatest(hideStoriesSignal, lumenGhostSignal)
+        |> map { hideStories, _ -> Bool in
+            return hideStories
+        }
+        //
         //
         
         let passcode = context.sharedContext.accountManager.accessChallengeData()
@@ -7083,7 +7105,7 @@ private final class ChatListLocationContext {
         case .chatList:
             if !hideNetworkActivityStatus {
                 self.titleDisposable = combineLatest(queue: .mainQueue(),
-                    hideStoriesSignal, // MARK: Swiftgram
+                    hideStoriesAndGhostSignal, // MARK: Swiftgram, Lumen
                     networkState,
                     hasProxy,
                     passcode,
@@ -7490,6 +7512,21 @@ private final class ChatListLocationContext {
                     )
                 } else {
                     self.settingsButton = nil
+                }
+                //
+                
+                // MARK: Lumen
+                if case let .chatList(groupId) = self.location, groupId == .root {
+                    let ghostEnabled = LumenSettings.shared.ghostMode
+                    self.ghostButton = NavigationBarComponent.Button(id: "lumenGhost",
+                        content: .text(title: ghostEnabled ? "👻" : "👁", isBold: false),
+                        action: { _ in
+                            LumenSettings.shared.ghostMode = !LumenSettings.shared.ghostMode
+                            HapticFeedback().impact(.light)
+                        }
+                    )
+                } else {
+                    self.ghostButton = nil
                 }
                 //
                 

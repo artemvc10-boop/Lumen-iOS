@@ -27,6 +27,7 @@ import UndoUI
 private enum SGControllerSection: Int32, SGItemListSection {
     case search
     case trending
+    case ghost // MARK: Lumen
     case content
     case tabs
     case folders
@@ -45,6 +46,13 @@ private enum SGControllerSection: Int32, SGItemListSection {
 }
 
 private enum SGBoolSetting: String {
+    // MARK: Lumen
+    case lumenGhostMode
+    case lumenGhostReadReceipts
+    case lumenGhostStoryViews
+    case lumenGhostOnline
+    case lumenGhostTyping
+    //
     case hidePhoneInSettings
     case showTabNames
     case showContactsTab
@@ -163,6 +171,17 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
         id.increment(3)
     }
     
+    // MARK: Lumen
+    let ghost = LumenSettings.shared
+    entries.append(.header(id: id.count, section: .ghost, text: i18n("Lumen.Ghost.Header", lang), badge: nil))
+    entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostMode, value: ghost.ghostMode, text: i18n("Lumen.Ghost.Enabled", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostReadReceipts, value: ghost.value(.ghostHideReadReceipts), text: i18n("Lumen.Ghost.ReadReceipts", lang), enabled: ghost.ghostMode))
+    entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostStoryViews, value: ghost.value(.ghostHideStoryViews), text: i18n("Lumen.Ghost.StoryViews", lang), enabled: ghost.ghostMode))
+    entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostOnline, value: ghost.value(.ghostHideOnline), text: i18n("Lumen.Ghost.Online", lang), enabled: ghost.ghostMode))
+    entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostTyping, value: ghost.value(.ghostHideTyping), text: i18n("Lumen.Ghost.Typing", lang), enabled: ghost.ghostMode))
+    entries.append(.notice(id: id.count, section: .ghost, text: i18n("Lumen.Ghost.Notice", lang)))
+    //
+
     if appConfiguration.sgWebSettings.global.canEditSettings {
         entries.append(.disclosure(id: id.count, section: .content, link: .contentSettings, text: i18n("Settings.ContentSettings", lang)))
     } else {
@@ -367,6 +386,19 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
           }
         },*/ setBoolValue: { setting, value in
         switch setting {
+        // MARK: Lumen
+        case .lumenGhostMode:
+            LumenSettings.shared.ghostMode = value
+            simplePromise.set(true) // Trigger update for 'enabled' field of other toggles
+        case .lumenGhostReadReceipts:
+            LumenSettings.shared.set(value, for: .ghostHideReadReceipts)
+        case .lumenGhostStoryViews:
+            LumenSettings.shared.set(value, for: .ghostHideStoryViews)
+        case .lumenGhostOnline:
+            LumenSettings.shared.set(value, for: .ghostHideOnline)
+        case .lumenGhostTyping:
+            LumenSettings.shared.set(value, for: .ghostHideTyping)
+        //
         case .hidePhoneInSettings:
             SGSimpleSettings.shared.hidePhoneInSettings = value
             askForRestart?()

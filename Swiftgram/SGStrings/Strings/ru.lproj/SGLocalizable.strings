@@ -277,3 +277,12 @@
 "Settings.NY.Notice" = "Доступны только на ограниченное время!";
 "Settings.videoControlsInFooter" = "Кнопки видео снизу";
 "Settings.HideAccountInNotifications" = "Скрыть аккаунт в уведомлениях";
+
+/* MARK: Lumen */
+"Lumen.Ghost.Header" = "РЕЖИМ ПРИЗРАКА";
+"Lumen.Ghost.Enabled" = "Режим призрака";
+"Lumen.Ghost.ReadReceipts" = "Не отправлять «прочитано»";
+"Lumen.Ghost.StoryViews" = "Не отправлять просмотр историй";
+"Lumen.Ghost.Online" = "Не отправлять «в сети»";
+"Lumen.Ghost.Typing" = "Не отправлять «печатает»";
+"Lumen.Ghost.Notice" = "Собеседник не увидит, что вы прочитали сообщения, прослушали голосовое или открыли одноразовое фото. Включать и выключать призрака можно кнопкой 👻 в списке чатов.";

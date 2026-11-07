@@ -2,6 +2,8 @@ import Foundation
 import Postbox
 internal import TelegramApi
 import SwiftSignalKit
+import MtProtoKit
+import SGSimpleSettings
 
 
 private enum PeerReadStateMarker: Equatable {
@@ -272,7 +274,9 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
             // A rejected push must not be retried: the operation is only cleared once it
             // succeeds, so a permanent rejection would loop without end. The cloud branches
             // below drop their errors the same way.
-            return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
+            // MARK: Lumen: ghost mode keeps the read locally and tells the server nothing.
+            let readRequest: Signal<Api.Bool, MTRpcError> = LumenSettings.shared.sendReadReceipts ? network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp)) : .complete()
+            return readRequest
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .complete()
             }
@@ -290,7 +294,9 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                 let (channelId, accessHash) = (inputPeerChannelData.channelId, inputPeerChannelData.accessHash)
                 switch readState {
                 case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
-                    var pushSignal: Signal<Void, NoError> = network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(.init(channelId: channelId, accessHash: accessHash)), maxId: maxIncomingReadId))
+                    // MARK: Lumen: ghost mode
+                    let readRequest: Signal<Api.Bool, MTRpcError> = LumenSettings.shared.sendReadReceipts ? network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(.init(channelId: channelId, accessHash: accessHash)), maxId: maxIncomingReadId)) : .complete()
+                    var pushSignal: Signal<Void, NoError> = readRequest
                     |> `catch` { _ -> Signal<Api.Bool, NoError> in
                         return .complete()
                     }
@@ -320,7 +326,9 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
             default:
                 switch readState {
                 case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
-                    var pushSignal: Signal<Void, NoError> = network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
+                    // MARK: Lumen: ghost mode
+                    let readRequest: Signal<Api.messages.AffectedMessages, MTRpcError> = LumenSettings.shared.sendReadReceipts ? network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId)) : .complete()
+                    var pushSignal: Signal<Void, NoError> = readRequest
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
                         return .single(nil)

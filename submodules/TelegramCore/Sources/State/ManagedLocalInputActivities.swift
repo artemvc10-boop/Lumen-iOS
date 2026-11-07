@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import SGSimpleSettings
 internal import TelegramApi
 import MtProtoKit
 
@@ -142,6 +143,22 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
 }
 
 private func requestActivity(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, threadId: Int64?, activity: PeerInputActivity?) -> Signal<Void, NoError> {
+    // MARK: Lumen: ghost mode sends no "typing", "recording" or "uploading" status.
+    // Speaking in a group call is not hidden: it drives the call UI of everyone in it.
+    if !LumenSettings.shared.sendTypingStatus {
+        var isGroupCallSpeech = false
+        if let activity {
+            switch activity {
+            case .speakingInGroupCall:
+                isGroupCallSpeech = true
+            default:
+                break
+            }
+        }
+        if !isGroupCallSpeech {
+            return .complete()
+        }
+    }
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) {
             if peerId == accountPeerId {
