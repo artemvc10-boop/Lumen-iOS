@@ -1230,8 +1230,11 @@ public final class AccountStateManager {
                     let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
                 }
                 
+                let lumenAccountPeerId = self.accountPeerId // MARK: Lumen
                 let signal = self.postbox.transaction { transaction -> [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] in
                     var messageList: [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] = []
+                    
+                    lumenReportIncomingMessages(transaction: transaction, accountPeerId: lumenAccountPeerId, ids: events.addedIncomingMessageIds) // MARK: Lumen
                     
                     for id in events.addedIncomingMessageIds {
                         let (messages, notify, _, _, threadData) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)

@@ -16,6 +16,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//Swiftgram/LumenPlugins:LumenPlugins", # MARK: Lumen
         "//Swiftgram/SGItemListUI:SGItemListUI",
         "//Swiftgram/SGLogging:SGLogging",
         "//Swiftgram/SGSimpleSettings:SGSimpleSettings",

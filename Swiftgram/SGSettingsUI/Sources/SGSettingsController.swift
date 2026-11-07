@@ -1,6 +1,7 @@
 // MARK: Swiftgram
 import SGLogging
 import SGSimpleSettings
+import LumenPlugins // MARK: Lumen
 import SGStrings
 import SGAPIToken
 
@@ -27,6 +28,7 @@ import UndoUI
 private enum SGControllerSection: Int32, SGItemListSection {
     case search
     case trending
+    case plugins // MARK: Lumen
     case ghost // MARK: Lumen
     case history // MARK: Lumen
     case lumenContent // MARK: Lumen
@@ -142,6 +144,7 @@ private enum SGSliderSetting: String {
 }
 
 private enum SGDisclosureLink: String {
+    case lumenPlugins // MARK: Lumen
     case contentSettings
     case languageSettings
 }
@@ -180,6 +183,7 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     }
     
     // MARK: Lumen
+    entries.append(.disclosure(id: id.count, section: .plugins, link: .lumenPlugins, text: i18n("Lumen.Plugins.Title", lang)))
     let ghost = LumenSettings.shared
     entries.append(.header(id: id.count, section: .ghost, text: i18n("Lumen.Ghost.Header", lang), badge: nil))
     entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostMode, value: ghost.ghostMode, text: i18n("Lumen.Ghost.Enabled", lang), enabled: true))
@@ -756,6 +760,11 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             return
         }
         switch (link) {
+            // MARK: Lumen
+            case .lumenPlugins:
+                if #available(iOS 14.0, *) {
+                    pushControllerImpl?(lumenPluginsController(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
+                }
             case .languageSettings:
                 pushControllerImpl?(context.sharedContext.makeLocalizationListController(context: context))
             case .contentSettings:

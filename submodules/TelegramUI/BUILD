@@ -6,6 +6,7 @@ load(
 )
 
 sgdeps = [
+    "//Swiftgram/LumenPlugins:LumenPlugins", # MARK: Lumen
     "//Swiftgram/SGSettingsUI:SGSettingsUI",
     "//Swiftgram/SGConfig:SGConfig",
     "//Swiftgram/SGAPIWebSettings:SGAPIWebSettings",

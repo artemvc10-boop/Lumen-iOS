@@ -1638,6 +1638,11 @@ public class Account {
         
         self.automaticCacheEvictionContext = AutomaticCacheEvictionContext(postbox: postbox, accountManager: accountManager)
         
+        // MARK: Lumen: app extensions run their own short-lived accounts; plugins use the app's.
+        if !supplementary {
+            lumenRegisterAccount(self)
+        }
+        
         /*#if DEBUG
         self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {
             print("debugFetchAllStickers done")
