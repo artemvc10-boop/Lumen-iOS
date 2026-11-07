@@ -1,0 +1,122 @@
+name: Lumen iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: 'Device build configuration'
+        type: choice
+        options: [release_arm64, debug_arm64]
+        default: release_arm64
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lumen-ios-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build IPA
+    runs-on: ${{ vars.LUMEN_RUNNER || 'xcode-27' }}
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Select the Xcode pinned in versions.json
+        run: |
+          set -euo pipefail
+          XCODE_VERSION="$(python -c 'import json; print(json.load(open("versions.json"))["xcode"])')"
+          DEVELOPER_DIR="/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          if [[ ! -d "$DEVELOPER_DIR" ]]; then
+            echo "::error::Xcode ${XCODE_VERSION} is not on this runner"
+            ls -d /Applications/Xcode*.app
+            exit 1
+          fi
+          sudo xcode-select --switch "$DEVELOPER_DIR"
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+          xcodebuild -version
+
+      # The image carries other Xcodes and simulator runtimes; the Telegram build needs the space.
+      - name: Free disk space
+        run: |
+          set -uo pipefail
+          df -h /
+          KEEP="$(cd "${DEVELOPER_DIR%/Contents/Developer}" && pwd -P)"
+          for app in /Applications/Xcode*.app; do
+            if [[ ! -L "$app" && "$(cd "$app" && pwd -P)" != "$KEEP" ]]; then sudo rm -rf "$app" & fi
+          done
+          xcrun simctl delete all 2>/dev/null
+          xcrun simctl runtime delete all 2>/dev/null
+          sudo rm -rf ~/Library/Android /usr/local/share/dotnet ~/.dotnet ~/Library/Developer/CoreSimulator/Caches &
+          wait
+          df -h /
+
+      - name: Install the Metal toolchain
+        run: |
+          set -euo pipefail
+          xcrun metal --version >/dev/null 2>&1 || xcodebuild -downloadComponent MetalToolchain
+          for i in $(seq 1 60); do xcrun metal --version && exit 0; sleep 5; done
+          echo "::error::Metal toolchain unavailable"; exit 1
+
+      - name: Install ccache
+        run: command -v ccache >/dev/null || brew install ccache
+
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/telegram-bazel-cache
+          key: bazel-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            bazel-${{ github.ref_name }}-
+            bazel-
+
+      - name: Build
+        env:
+          LUMEN_BAZEL_CACHE: /Users/runner/telegram-bazel-cache
+          LUMEN_CONFIGURATION: ${{ inputs.configuration }}
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_ID }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: python -u ci/lumen_ci.py --source . --output artifacts
+
+      # Saved even after a failure, so the next run only recompiles what is left.
+      - uses: actions/cache/save@v4
+        if: always()
+        continue-on-error: true
+        with:
+          path: ~/telegram-bazel-cache
+          key: bazel-${{ github.ref_name }}-${{ github.run_id }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lumen-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            artifacts/*.ipa
+            artifacts/build-manifest.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BUILD="$(python -c 'import json; print(json.load(open("artifacts/build-manifest.json"))["build_number"])')"
+          gh release create "build-$BUILD" artifacts/Lumen-$BUILD.ipa --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Lumen build $BUILD" \
+            --notes "Ad-hoc signed IPA. Install with SideStore / LiveContainer / Sideloadly, which re-sign it with your Apple ID."

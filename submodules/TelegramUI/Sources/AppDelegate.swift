@@ -715,10 +715,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             networkEngineFactory: RustNetworkEngineFactory()
         )
         
-        guard let appGroupUrl = maybeAppGroupUrl else {
+        // MARK: Lumen
+        // Sideloaded copies (LiveContainer, installers that drop app groups) get no shared
+        // container; keep the data in the app's own sandbox instead of refusing to start.
+        let lumenPrivateContainerUrl = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("LumenAppGroup", isDirectory: true)
+        if maybeAppGroupUrl == nil, let url = lumenPrivateContainerUrl {
+            try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        }
+        guard let appGroupUrl = maybeAppGroupUrl ?? lumenPrivateContainerUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
             return true
         }
+        //
         
         var isDebugConfiguration = false
         #if DEBUG
