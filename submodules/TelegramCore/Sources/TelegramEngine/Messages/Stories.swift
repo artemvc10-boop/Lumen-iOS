@@ -1,5 +1,6 @@
 import Foundation
 import SwiftSignalKit
+import SGSimpleSettings
 import Postbox
 internal import TelegramApi
 
@@ -2086,6 +2087,10 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             }
             #endif
             
+            // MARK: Lumen: ghost mode
+            if !LumenSettings.shared.sendStoryViews {
+                return .complete()
+            }
             return account.network.request(Api.functions.stories.incrementStoryViews(peer: inputPeer, id: [id]))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)

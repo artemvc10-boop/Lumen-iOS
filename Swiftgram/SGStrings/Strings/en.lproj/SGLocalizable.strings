@@ -282,3 +282,12 @@
 "Settings.NY.Style.lightning" = "Lightning";
 "Settings.NY.Notice" = "Available for a limited time only!";
 "Settings.HideAccountInNotifications" = "Hide Account in Notifications";
+
+/* MARK: Lumen */
+"Lumen.Ghost.Header" = "GHOST MODE";
+"Lumen.Ghost.Enabled" = "Ghost Mode";
+"Lumen.Ghost.ReadReceipts" = "Don't Send Read Receipts";
+"Lumen.Ghost.StoryViews" = "Don't Send Story Views";
+"Lumen.Ghost.Online" = "Don't Send Online Status";
+"Lumen.Ghost.Typing" = "Don't Send Typing Status";
+"Lumen.Ghost.Notice" = "Chats you read stay unread for others, including played voice messages and opened view-once media. You can toggle ghost mode with the 👻 button in the chat list.";

@@ -2,6 +2,7 @@ import Foundation
 internal import TelegramApi
 import Postbox
 import SwiftSignalKit
+import SGSimpleSettings
 import MtProtoKit
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
@@ -43,6 +44,8 @@ private final class AccountPresenceManagerImpl {
     }
     
     private func updatePresence(_ isOnline: Bool) {
+        // MARK: Lumen: ghost mode reports offline even while the app is open.
+        let isOnline = isOnline && LumenSettings.shared.sendOnlineStatus
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in

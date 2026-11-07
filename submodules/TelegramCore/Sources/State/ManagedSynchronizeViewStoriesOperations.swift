@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import SGSimpleSettings
 internal import TelegramApi
 import MtProtoKit
 
@@ -120,6 +121,10 @@ func managedSynchronizeViewStoriesOperations(postbox: Postbox, network: Network,
 
 private func pushStoriesAreSeen(postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: SynchronizeViewStoriesOperation) -> Signal<Void, NoError> {
     guard let inputPeer = apiInputPeer(peer) else {
+        return .complete()
+    }
+    // MARK: Lumen: ghost mode marks the story seen only on this device.
+    if !LumenSettings.shared.sendStoryViews {
         return .complete()
     }
     return network.request(Api.functions.stories.readStories(peer: inputPeer, maxId: operation.storyId))
