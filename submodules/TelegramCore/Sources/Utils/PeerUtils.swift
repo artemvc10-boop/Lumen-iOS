@@ -260,6 +260,10 @@ public extension Peer {
     }
     
     var isCopyProtectionEnabled: Bool {
+        // MARK: Lumen
+        if LumenSettings.shared.unlockProtectedContent {
+            return false
+        }
         switch self {
         case let group as TelegramGroup:
             return group.flags.contains(.copyProtectionEnabled)

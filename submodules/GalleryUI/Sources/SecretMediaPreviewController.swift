@@ -1,4 +1,5 @@
 import Foundation
+import SGSimpleSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -422,7 +423,8 @@ public final class SecretMediaPreviewController: ViewController {
             self.screenCaptureEventsDisposable = (screenCaptureEvents()
             |> deliverOnMainQueue).start(next: { [weak self] _ in
                 if let strongSelf = self, strongSelf.traceVisibility() {
-                    if strongSelf.messageId.peerId.namespace == Namespaces.Peer.CloudUser {
+                    // MARK: Lumen: no "took a screenshot" notice when screenshots are allowed.
+                    if strongSelf.messageId.peerId.namespace == Namespaces.Peer.CloudUser && !LumenSettings.shared.allowScreenshots {
                         let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.messageId.peerId, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
                     } else if strongSelf.messageId.peerId.namespace == Namespaces.Peer.SecretChat {
                         let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: strongSelf.messageId.peerId).start()

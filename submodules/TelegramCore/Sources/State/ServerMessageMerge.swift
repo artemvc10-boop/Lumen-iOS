@@ -41,5 +41,8 @@ func mergedServerMessageUpdate(previous previousMessage: Message, updated messag
         updatedMedia = previousMessage.media
     }
 
+    // MARK: Lumen: keep edit history and the deleted mark across server updates.
+    updatedAttributes = lumenMergedAttributes(previous: previousMessage, updatedText: message.text, attributes: updatedAttributes)
+
     return message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes).withUpdatedMedia(updatedMedia)
 }

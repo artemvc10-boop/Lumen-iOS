@@ -1,3 +1,4 @@
+import SGSimpleSettings
 import Foundation
 import Postbox
 internal import TelegramApi
@@ -1272,8 +1273,15 @@ extension StoreMessage {
                         medias.append(mediaValue)
                     
                         if let expirationTimer = expirationTimer, expirationTimer > 0 {
-                            attributes.append(AutoclearTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
-                            consumableContent = (true, false)
+                            // MARK: Lumen: keep view-once media as ordinary media. Without the
+                            // autoclear and consumable attributes it never expires, can be opened
+                            // again and saved, and opening it reports nothing to the sender.
+                            if LumenSettings.shared.keepViewOnceMedia {
+                                attributes.append(LumenViewOnceMessageAttribute(timeout: expirationTimer))
+                            } else {
+                                attributes.append(AutoclearTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                                consumableContent = (true, false)
+                            }
                         }
                         
                         if let nonPremium = nonPremium, nonPremium {

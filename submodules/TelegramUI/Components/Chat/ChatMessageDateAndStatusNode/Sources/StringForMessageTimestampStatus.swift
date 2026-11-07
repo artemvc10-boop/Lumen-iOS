@@ -61,7 +61,7 @@ private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String 
     }
 }
 
-public func stringForMessageTimestampStatus(
+private func lumenBaseStringForMessageTimestampStatus(
     context: AccountContext,
     message: EngineMessage,
     dateTimeFormat: PresentationDateTimeFormat,
@@ -252,4 +252,26 @@ public func stringForMessageTimestampStatus(
     }
     
     return dateText
+}
+
+// MARK: Lumen: 🗑 marks messages kept after deletion, 🔥 view-once media kept as ordinary media.
+public func stringForMessageTimestampStatus(
+    context: AccountContext,
+    message: EngineMessage,
+    dateTimeFormat: PresentationDateTimeFormat,
+    nameDisplayOrder: PresentationPersonNameOrder,
+    strings: PresentationStrings,
+    format: MessageTimestampStatusFormat = .regular,
+    associatedData: ChatMessageItemAssociatedData,
+    ignoreAuthor: Bool = false
+) -> String {
+    let result = lumenBaseStringForMessageTimestampStatus(context: context, message: message, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, strings: strings, format: format, associatedData: associatedData, ignoreAuthor: ignoreAuthor)
+    var prefix = ""
+    if message.attributes.contains(where: { $0 is LumenViewOnceMessageAttribute }) {
+        prefix += "🔥 "
+    }
+    if message.attributes.contains(where: { $0 is LumenDeletedMessageAttribute }) {
+        prefix += "🗑 "
+    }
+    return prefix + result
 }

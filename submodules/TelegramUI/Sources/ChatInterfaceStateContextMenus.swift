@@ -1588,6 +1588,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             sgActions.append(showJsonAction)
         }
         //
+        // MARK: Lumen
+        if !message.lumenEditHistory.isEmpty {
+            actions.append(sgMakeContextMenuAction(.lumenEditHistory(controllerInteraction: controllerInteraction), chatPresentationInterfaceState: chatPresentationInterfaceState, message: message))
+        }
+        //
         
         var threadId: Int64?
         var threadMessageCount: Int = 0

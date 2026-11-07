@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import SGSimpleSettings
 internal import TelegramApi
 
 public extension MessageFlags {
@@ -536,6 +537,10 @@ public extension Message {
     }
     
     func isCopyProtected() -> Bool {
+        // MARK: Lumen: content protection is enforced by clients only; Lumen lets you copy and save.
+        if LumenSettings.shared.unlockProtectedContent {
+            return false
+        }
         if self.flags.contains(.CopyProtected) {
             return true
         } else if let group = self.peers[self.id.peerId] as? TelegramGroup, group.flags.contains(.copyProtectionEnabled) {
