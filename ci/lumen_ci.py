@@ -21,6 +21,9 @@ from pathlib import Path
 DEFAULT_BUNDLE_ID = 'com.artem.lumen'
 # Placeholder team; the re-signing tool substitutes the real one.
 DEFAULT_TEAM_ID = 'LUMEN00000'
+# Notification extensions are useless without push (unavailable to free Apple IDs);
+# Siri intents and screen broadcast are rarely used. Each extension costs an App ID.
+DEFAULT_EXTENSIONS = 'ShareExtension,WidgetExtension'
 
 PROFILE_GUARD = ('    if platform_prerequisites.platform.is_device:\n'
                  '        processor_partials.append(\n'
@@ -123,9 +126,12 @@ def _sign(path, work, entitlements=None):
     run(args + [path])
 
 
-def embed_sideload_entitlements(ipa, team_id):
+def embed_sideload_entitlements(ipa, team_id, keep_extensions):
     """Without an app group in the binaries the installer never registers one, and
-    the app and its extensions cannot share the account database."""
+    the app and its extensions cannot share the account database.
+
+    A free Apple ID registers at most 10 App IDs a week and every extension takes one,
+    so only the extensions in keep_extensions stay in the IPA."""
     with tempfile.TemporaryDirectory() as temporary:
         work = Path(temporary)
         root = work / 'ipa'
@@ -139,6 +145,10 @@ def embed_sideload_entitlements(ipa, team_id):
                     'com.apple.developer.team-identifier': team_id,
                     'com.apple.security.application-groups': [group]}
 
+        for plugin in (app / 'PlugIns').glob('*.appex'):
+            if not any(plugin.stem.startswith(name) for name in keep_extensions):
+                print('Removing extension ' + plugin.name, flush=True)
+                shutil.rmtree(plugin)
         nested = [p for p in app.rglob('*') if p.suffix == '.framework' or (p.suffix == '.dylib' and p.is_file())]
         # Deepest first, so each container is signed after the code inside it.
         for code in sorted(nested, key=lambda p: len(p.parts), reverse=True):
@@ -215,7 +225,8 @@ def build(source, output, env):
         verify_ipa(ipa, config['bundle_id'])
         target = output / 'Lumen-{}.ipa'.format(number)
         shutil.copyfile(ipa, target)
-        manifest['extensions'] = embed_sideload_entitlements(target, config['team_id'])
+        keep = [name.strip() for name in env.get('LUMEN_EXTENSIONS', DEFAULT_EXTENSIONS).split(',') if name.strip()]
+        manifest['extensions'] = embed_sideload_entitlements(target, config['team_id'], keep)
         manifest['app'] = verify_ipa(target, config['bundle_id'])
         manifest['ipa'] = target.name
         manifest['status'] = 'success'
