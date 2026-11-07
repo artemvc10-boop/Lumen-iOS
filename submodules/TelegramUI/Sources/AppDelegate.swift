@@ -3,6 +3,7 @@ import StoreKit
 import SGIAP
 import SGAPI
 import SGDeviceToken
+import LumenPlugins // MARK: Lumen
 import SGAPIToken
 
 import SGActionRequestHandlerSanitizer
@@ -722,6 +723,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         if maybeAppGroupUrl == nil, let url = lumenPrivateContainerUrl {
             try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         }
+        LumenPluginManager.shared.start()
         guard let appGroupUrl = maybeAppGroupUrl ?? lumenPrivateContainerUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
             return true

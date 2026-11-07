@@ -304,3 +304,4 @@
 "Lumen.Content.Screenshots" = "Allow Screenshots";
 "Lumen.Content.Notice" = "View-once photos, videos and voice messages arrive as ordinary media marked 🔥: they never expire, can be saved, and the sender is not told you opened them. Copying and saving work in chats that forbid it, and screenshots are not reported. Applies to messages received from now on.";
 "Lumen.Content.HideAds" = "Hide Sponsored Messages";
+"Lumen.Plugins.Title" = "Plugins";
