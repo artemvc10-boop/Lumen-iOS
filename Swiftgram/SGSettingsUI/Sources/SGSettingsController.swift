@@ -28,6 +28,8 @@ private enum SGControllerSection: Int32, SGItemListSection {
     case search
     case trending
     case ghost // MARK: Lumen
+    case history // MARK: Lumen
+    case lumenContent // MARK: Lumen
     case content
     case tabs
     case folders
@@ -52,6 +54,12 @@ private enum SGBoolSetting: String {
     case lumenGhostStoryViews
     case lumenGhostOnline
     case lumenGhostTyping
+    case lumenSaveDeletedMessages
+    case lumenSaveEditHistory
+    case lumenKeepViewOnce
+    case lumenUnlockProtected
+    case lumenAllowScreenshots
+    case lumenHideSponsored
     //
     case hidePhoneInSettings
     case showTabNames
@@ -180,6 +188,16 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostOnline, value: ghost.value(.ghostHideOnline), text: i18n("Lumen.Ghost.Online", lang), enabled: ghost.ghostMode))
     entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostTyping, value: ghost.value(.ghostHideTyping), text: i18n("Lumen.Ghost.Typing", lang), enabled: ghost.ghostMode))
     entries.append(.notice(id: id.count, section: .ghost, text: i18n("Lumen.Ghost.Notice", lang)))
+    entries.append(.header(id: id.count, section: .history, text: i18n("Lumen.History.Header", lang), badge: nil))
+    entries.append(.toggle(id: id.count, section: .history, settingName: .lumenSaveDeletedMessages, value: ghost.saveDeletedMessages, text: i18n("Lumen.History.Deleted", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .history, settingName: .lumenSaveEditHistory, value: ghost.saveEditHistory, text: i18n("Lumen.History.Edits", lang), enabled: true))
+    entries.append(.notice(id: id.count, section: .history, text: i18n("Lumen.History.Notice", lang)))
+    entries.append(.header(id: id.count, section: .lumenContent, text: i18n("Lumen.Content.Header", lang), badge: nil))
+    entries.append(.toggle(id: id.count, section: .lumenContent, settingName: .lumenKeepViewOnce, value: ghost.keepViewOnceMedia, text: i18n("Lumen.Content.ViewOnce", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .lumenContent, settingName: .lumenUnlockProtected, value: ghost.unlockProtectedContent, text: i18n("Lumen.Content.Protected", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .lumenContent, settingName: .lumenAllowScreenshots, value: ghost.allowScreenshots, text: i18n("Lumen.Content.Screenshots", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .lumenContent, settingName: .lumenHideSponsored, value: ghost.hideSponsoredMessages, text: i18n("Lumen.Content.HideAds", lang), enabled: true))
+    entries.append(.notice(id: id.count, section: .lumenContent, text: i18n("Lumen.Content.Notice", lang)))
     //
 
     if appConfiguration.sgWebSettings.global.canEditSettings {
@@ -398,6 +416,19 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             LumenSettings.shared.set(value, for: .ghostHideOnline)
         case .lumenGhostTyping:
             LumenSettings.shared.set(value, for: .ghostHideTyping)
+        case .lumenSaveDeletedMessages:
+            LumenSettings.shared.set(value, for: .saveDeletedMessages)
+        case .lumenSaveEditHistory:
+            LumenSettings.shared.set(value, for: .saveEditHistory)
+        case .lumenKeepViewOnce:
+            LumenSettings.shared.set(value, for: .keepViewOnceMedia)
+        case .lumenUnlockProtected:
+            LumenSettings.shared.set(value, for: .unlockProtectedContent)
+            askForRestart?()
+        case .lumenAllowScreenshots:
+            LumenSettings.shared.set(value, for: .allowScreenshots)
+        case .lumenHideSponsored:
+            LumenSettings.shared.set(value, for: .hideSponsoredMessages)
         //
         case .hidePhoneInSettings:
             SGSimpleSettings.shared.hidePhoneInSettings = value

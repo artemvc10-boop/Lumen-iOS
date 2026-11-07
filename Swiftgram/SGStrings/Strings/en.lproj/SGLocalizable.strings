@@ -291,3 +291,16 @@
 "Lumen.Ghost.Online" = "Don't Send Online Status";
 "Lumen.Ghost.Typing" = "Don't Send Typing Status";
 "Lumen.Ghost.Notice" = "Chats you read stay unread for others, including played voice messages and opened view-once media. You can toggle ghost mode with the 👻 button in the chat list.";
+"Lumen.History.Header" = "MESSAGE HISTORY";
+"Lumen.History.Deleted" = "Keep Deleted Messages";
+"Lumen.History.Edits" = "Keep Edit History";
+"Lumen.History.Notice" = "Messages others delete stay in the chat with 🗑 next to the time. Earlier versions of edited messages are available in the message menu. Everything is stored only on this device.";
+"Lumen.History.Menu" = "Edit History";
+"Lumen.History.Title" = "Edit History";
+"Lumen.History.Current" = "Current";
+"Lumen.Content.Header" = "CONTENT";
+"Lumen.Content.ViewOnce" = "Keep View-Once Media";
+"Lumen.Content.Protected" = "Allow Saving Protected Content";
+"Lumen.Content.Screenshots" = "Allow Screenshots";
+"Lumen.Content.Notice" = "View-once photos, videos and voice messages arrive as ordinary media marked 🔥: they never expire, can be saved, and the sender is not told you opened them. Copying and saving work in chats that forbid it, and screenshots are not reported. Applies to messages received from now on.";
+"Lumen.Content.HideAds" = "Hide Sponsored Messages";

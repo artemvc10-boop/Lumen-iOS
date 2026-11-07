@@ -99,7 +99,29 @@ enum SGContextMenuActionFactory {
     case json(controllerInteraction: ChatControllerInteraction, context: AccountContext)
     case saveToCloud(interfaceInteraction: ChatPanelInterfaceInteraction, selectAll: Bool, isImage: Bool, messages: [EngineRawMessage])
     case hideForwardName(interfaceInteraction: ChatPanelInterfaceInteraction, selectAll: Bool, isImage: Bool, messages: [EngineRawMessage])
+    case lumenEditHistory(controllerInteraction: ChatControllerInteraction) // MARK: Lumen
 }
+
+// MARK: Lumen
+private func lumenShowEditHistory(controllerInteraction: ChatControllerInteraction, lang: String, message: EngineRawMessage) {
+    guard var topController = controllerInteraction.navigationController()?.view.window?.rootViewController else {
+        return
+    }
+    while let presented = topController.presentedViewController {
+        topController = presented
+    }
+    let formatter = DateFormatter()
+    formatter.dateStyle = .short
+    formatter.timeStyle = .short
+    var versions = message.lumenEditHistory.map { entry -> String in
+        return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(entry.date))) + "\n" + entry.text
+    }
+    versions.append(i18n("Lumen.History.Current", lang) + "\n" + message.text)
+    let alert = UIAlertController(title: i18n("Lumen.History.Title", lang), message: versions.joined(separator: "\n\n———\n\n"), preferredStyle: .alert)
+    alert.addAction(UIAlertAction(title: "OK", style: .cancel))
+    topController.present(alert, animated: true)
+}
+//
 
 func sgMakeContextMenuAction(_ action: SGContextMenuActionFactory, chatPresentationInterfaceState: ChatPresentationInterfaceState, message: EngineRawMessage) -> ContextMenuItem {
     switch action {
@@ -116,6 +138,14 @@ func sgMakeContextMenuAction(_ action: SGContextMenuActionFactory, chatPresentat
         }, action: { _, f in
             interfaceInteraction.forwardMessages(selectAll || isImage ? messages : [message], "forwardMessagesToCloud")
             f(.dismissWithoutContent)
+        }))
+    case let .lumenEditHistory(controllerInteraction):
+        let lang = chatPresentationInterfaceState.strings.baseLanguageCode
+        return .action(ContextMenuActionItem(text: i18n("Lumen.History.Menu", lang), icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+        }, action: { _, f in
+            f(.default)
+            lumenShowEditHistory(controllerInteraction: controllerInteraction, lang: lang, message: message)
         }))
     case let .hideForwardName(interfaceInteraction, selectAll, isImage, messages):
         return .action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.NotificationSettings_Stories_CompactHideName, icon: { theme in

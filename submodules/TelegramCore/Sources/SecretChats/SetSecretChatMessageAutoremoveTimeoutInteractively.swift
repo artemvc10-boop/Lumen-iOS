@@ -1,4 +1,5 @@
 import Foundation
+import SGSimpleSettings
 import Postbox
 import SwiftSignalKit
 
@@ -26,6 +27,10 @@ func _internal_setSecretChatMessageAutoremoveTimeoutInteractively(transaction: T
 }
 
 func _internal_addSecretChatMessageScreenshot(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    // MARK: Lumen: with screenshots allowed, the other side is not told about them.
+    if LumenSettings.shared.allowScreenshots {
+        return .complete()
+    }
     return account.postbox.transaction { transaction -> Void in
         if let _ = transaction.getPeer(peerId) as? TelegramSecretChat, let state = transaction.getPeerChatState(peerId) as? SecretChatState {
             switch state.embeddedState {

@@ -18,6 +18,18 @@ public final class LumenSettings {
         case ghostHideStoryViews = "lumen.ghost.storyViews"
         case ghostHideOnline = "lumen.ghost.online"
         case ghostHideTyping = "lumen.ghost.typing"
+        /// Keep messages other people delete, marked as deleted.
+        case saveDeletedMessages = "lumen.history.deleted"
+        /// Keep the earlier text of edited messages.
+        case saveEditHistory = "lumen.history.edits"
+        /// Turn view-once and self-destructing media into ordinary media.
+        case keepViewOnceMedia = "lumen.content.viewOnce"
+        /// Allow copying, forwarding and saving in chats that forbid it.
+        case unlockProtectedContent = "lumen.content.unlockProtected"
+        /// Allow screenshots and screen recording of protected and secret content.
+        case allowScreenshots = "lumen.content.screenshots"
+        /// Do not load sponsored messages in channels and bots.
+        case hideSponsoredMessages = "lumen.ads.hideSponsored"
     }
 
     private static let defaultValues: [String: Any] = [
@@ -26,6 +38,12 @@ public final class LumenSettings {
         Key.ghostHideStoryViews.rawValue: true,
         Key.ghostHideOnline.rawValue: true,
         Key.ghostHideTyping.rawValue: true,
+        Key.saveDeletedMessages.rawValue: true,
+        Key.saveEditHistory.rawValue: true,
+        Key.keepViewOnceMedia.rawValue: true,
+        Key.unlockProtectedContent.rawValue: true,
+        Key.allowScreenshots.rawValue: true,
+        Key.hideSponsoredMessages.rawValue: true,
     ]
 
     private let store: UserDefaults
@@ -65,4 +83,11 @@ public final class LumenSettings {
     public var sendStoryViews: Bool { return !self.ghostHides(.ghostHideStoryViews) }
     public var sendOnlineStatus: Bool { return !self.ghostHides(.ghostHideOnline) }
     public var sendTypingStatus: Bool { return !self.ghostHides(.ghostHideTyping) }
+
+    public var saveDeletedMessages: Bool { return self.value(.saveDeletedMessages) }
+    public var saveEditHistory: Bool { return self.value(.saveEditHistory) }
+    public var keepViewOnceMedia: Bool { return self.value(.keepViewOnceMedia) }
+    public var unlockProtectedContent: Bool { return self.value(.unlockProtectedContent) }
+    public var allowScreenshots: Bool { return self.value(.allowScreenshots) }
+    public var hideSponsoredMessages: Bool { return self.value(.hideSponsoredMessages) }
 }

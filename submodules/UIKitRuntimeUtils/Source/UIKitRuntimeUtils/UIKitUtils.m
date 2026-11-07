@@ -297,6 +297,11 @@ NSObject * _Nullable makeColorMatrixFilter() {
 static const void *layerDisableScreenshotsKey = &layerDisableScreenshotsKey;
 
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {
+    // MARK: Lumen: "allow screenshots" (LumenSettings key, on unless switched off).
+    NSNumber *lumenAllowScreenshots = [[NSUserDefaults standardUserDefaults] objectForKey:@"lumen.content.screenshots"];
+    if (disableScreenshots && (lumenAllowScreenshots == nil || [lumenAllowScreenshots boolValue])) {
+        disableScreenshots = false;
+    }
     static UITextField *textField = nil;
     static UIView *secureView = nil;
     static dispatch_once_t onceToken;
