@@ -156,23 +156,9 @@ func sgPeerInfoSettingsItems(context: AccountContext, paymentsEnabled: Bool, pre
         swiftgramLabel = .none
     }
 
-    let hasNewProFeatures = {
-        return false
-    }
-    let swiftgramProLabel: PeerInfoScreenDisclosureItem.Label
-    if hasNewProFeatures() {
-        swiftgramProLabel = .titleBadge(presentationData.strings.Settings_New, presentationData.theme.list.itemAccentColor)
-    } else {
-        swiftgramProLabel = .none
-    }
-
+    // MARK: Lumen: no "Swiftgram Pro" row, that subscription is tied to Swiftgram's servers.
     var items: [PeerInfoScreenItem] = []
-    if paymentsEnabled || context.sharedContext.immediateSGStatus.status > 1 {
-        items.append(PeerInfoScreenDisclosureItem(id: 0, label: swiftgramProLabel, text: "Swiftgram Pro", icon: PresentationResourcesSettings.swiftgramPro, action: {
-            interaction.openSettings(.swiftgramPro)
-        }))
-    }
-    items.append(PeerInfoScreenDisclosureItem(id: 1, label: swiftgramLabel, text: "Swiftgram", icon: PresentationResourcesSettings.swiftgram, action: {
+    items.append(PeerInfoScreenDisclosureItem(id: 1, label: swiftgramLabel, text: "Lumen", icon: PresentationResourcesSettings.swiftgram, action: {
         interaction.openSettings(.swiftgram)
     }))
     return items
