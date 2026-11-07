@@ -8,6 +8,10 @@ on:
         type: choice
         options: [release_arm64, debug_arm64]
         default: release_arm64
+      extensions:
+        description: 'App extensions to keep (each costs a free-account App ID; empty = none)'
+        type: string
+        default: 'ShareExtension,WidgetExtension'
 
 permissions:
   contents: write
@@ -86,6 +90,7 @@ jobs:
         env:
           LUMEN_BAZEL_CACHE: /Users/runner/telegram-bazel-cache
           LUMEN_CONFIGURATION: ${{ inputs.configuration }}
+          LUMEN_EXTENSIONS: ${{ inputs.extensions }}
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
           APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_ID }}
