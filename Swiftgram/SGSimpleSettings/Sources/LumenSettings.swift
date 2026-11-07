@@ -18,6 +18,8 @@ public final class LumenSettings {
         case ghostHideStoryViews = "lumen.ghost.storyViews"
         case ghostHideOnline = "lumen.ghost.online"
         case ghostHideTyping = "lumen.ghost.typing"
+        /// In ghost mode, mark a chat read when you send a message to it.
+        case ghostReadOnReply = "lumen.ghost.readOnReply"
         /// Keep messages other people delete, marked as deleted.
         case saveDeletedMessages = "lumen.history.deleted"
         /// Keep the earlier text of edited messages.
@@ -38,6 +40,7 @@ public final class LumenSettings {
         Key.ghostHideStoryViews.rawValue: true,
         Key.ghostHideOnline.rawValue: true,
         Key.ghostHideTyping.rawValue: true,
+        Key.ghostReadOnReply.rawValue: true,
         Key.saveDeletedMessages.rawValue: true,
         Key.saveEditHistory.rawValue: true,
         Key.keepViewOnceMedia.rawValue: true,
@@ -83,6 +86,7 @@ public final class LumenSettings {
     public var sendStoryViews: Bool { return !self.ghostHides(.ghostHideStoryViews) }
     public var sendOnlineStatus: Bool { return !self.ghostHides(.ghostHideOnline) }
     public var sendTypingStatus: Bool { return !self.ghostHides(.ghostHideTyping) }
+    public var readOnReply: Bool { return self.value(.ghostReadOnReply) }
 
     public var saveDeletedMessages: Bool { return self.value(.saveDeletedMessages) }
     public var saveEditHistory: Bool { return self.value(.saveEditHistory) }

@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import SGSimpleSettings
+internal import TelegramApi
 
 // MARK: Lumen
 
@@ -32,6 +33,49 @@ func lumenRegisterAccount(_ account: Account) {
     }
 }
 
+/// In ghost mode, replying to a chat still marks it read: answering a message while it
+/// shows as unread would give ghost mode away.
+func lumenReadOnReply(account: Account, peerId: PeerId) {
+    guard LumenSettings.shared.readOnReply, !LumenSettings.shared.sendReadReceipts else {
+        return
+    }
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        return
+    }
+    let network = account.network
+    let _ = (account.postbox.transaction { transaction -> (Peer, Int32)? in
+        guard let peer = transaction.getPeer(peerId), let topId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) else {
+            return nil
+        }
+        return (peer, topId.id)
+    }
+    |> mapToSignal { value -> Signal<Never, NoError> in
+        guard let value else {
+            return .complete()
+        }
+        let (peer, maxId) = value
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            guard let inputChannel = apiInputChannel(peer) else {
+                return .complete()
+            }
+            return network.request(Api.functions.channels.readHistory(channel: inputChannel, maxId: maxId))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .complete()
+            }
+            |> ignoreValues
+        } else {
+            guard let inputPeer = apiInputPeer(peer) else {
+                return .complete()
+            }
+            return network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxId))
+            |> `catch` { _ -> Signal<Api.messages.AffectedMessages, NoError> in
+                return .complete()
+            }
+            |> ignoreValues
+        }
+    }).start()
+}
+
 /// Runs the plugins' outgoing-text transform over the messages about to be sent.
 func lumenApplyOutgoingHook(accountPeerId: PeerId, peerId: PeerId, messages: [EnqueueMessage]) -> [EnqueueMessage] {
     guard let transform = LumenHooks.transformOutgoingText else {
@@ -53,6 +97,22 @@ func lumenApplyOutgoingHook(accountPeerId: PeerId, peerId: PeerId, messages: [En
     }
 }
 
+private func lumenChatType(transaction: Transaction, peerId: PeerId) -> String {
+    switch peerId.namespace {
+    case Namespaces.Peer.CloudUser:
+        return "private"
+    case Namespaces.Peer.SecretChat:
+        return "secret"
+    case Namespaces.Peer.CloudChannel:
+        if let channel = transaction.getPeer(peerId) as? TelegramChannel, case .broadcast = channel.info {
+            return "channel"
+        }
+        return "group"
+    default:
+        return "group"
+    }
+}
+
 /// Hands newly arrived messages to the plugins.
 func lumenReportIncomingMessages(transaction: Transaction, accountPeerId: PeerId, ids: [MessageId]) {
     guard let observer = LumenHooks.incomingMessages, !ids.isEmpty else {
@@ -61,7 +121,7 @@ func lumenReportIncomingMessages(transaction: Transaction, accountPeerId: PeerId
     var result: [LumenIncomingMessage] = []
     for id in ids {
         if let message = transaction.getMessage(id) {
-            result.append(LumenIncomingMessage(accountPeerId: accountPeerId.toInt64(), peerId: id.peerId.toInt64(), authorId: message.author?.id.toInt64(), messageId: id.id, text: message.text))
+            result.append(LumenIncomingMessage(accountPeerId: accountPeerId.toInt64(), peerId: id.peerId.toInt64(), authorId: message.author?.id.toInt64(), messageId: id.id, text: message.text, chatType: lumenChatType(transaction: transaction, peerId: id.peerId)))
         }
     }
     if !result.isEmpty {

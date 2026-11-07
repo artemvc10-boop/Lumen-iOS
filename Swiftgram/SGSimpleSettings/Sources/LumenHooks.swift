@@ -10,13 +10,16 @@ public struct LumenIncomingMessage {
     public let authorId: Int64?
     public let messageId: Int32
     public let text: String
+    /// "private", "group", "channel" or "secret".
+    public let chatType: String
 
-    public init(accountPeerId: Int64, peerId: Int64, authorId: Int64?, messageId: Int32, text: String) {
+    public init(accountPeerId: Int64, peerId: Int64, authorId: Int64?, messageId: Int32, text: String, chatType: String) {
         self.accountPeerId = accountPeerId
         self.peerId = peerId
         self.authorId = authorId
         self.messageId = messageId
         self.text = text
+        self.chatType = chatType
     }
 }
 

@@ -56,6 +56,7 @@ private enum SGBoolSetting: String {
     case lumenGhostStoryViews
     case lumenGhostOnline
     case lumenGhostTyping
+    case lumenGhostReadOnReply
     case lumenSaveDeletedMessages
     case lumenSaveEditHistory
     case lumenKeepViewOnce
@@ -191,6 +192,7 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostStoryViews, value: ghost.value(.ghostHideStoryViews), text: i18n("Lumen.Ghost.StoryViews", lang), enabled: ghost.ghostMode))
     entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostOnline, value: ghost.value(.ghostHideOnline), text: i18n("Lumen.Ghost.Online", lang), enabled: ghost.ghostMode))
     entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostTyping, value: ghost.value(.ghostHideTyping), text: i18n("Lumen.Ghost.Typing", lang), enabled: ghost.ghostMode))
+    entries.append(.toggle(id: id.count, section: .ghost, settingName: .lumenGhostReadOnReply, value: ghost.readOnReply, text: i18n("Lumen.Ghost.ReadOnReply", lang), enabled: ghost.ghostMode))
     entries.append(.notice(id: id.count, section: .ghost, text: i18n("Lumen.Ghost.Notice", lang)))
     entries.append(.header(id: id.count, section: .history, text: i18n("Lumen.History.Header", lang), badge: nil))
     entries.append(.toggle(id: id.count, section: .history, settingName: .lumenSaveDeletedMessages, value: ghost.saveDeletedMessages, text: i18n("Lumen.History.Deleted", lang), enabled: true))
@@ -420,6 +422,8 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             LumenSettings.shared.set(value, for: .ghostHideOnline)
         case .lumenGhostTyping:
             LumenSettings.shared.set(value, for: .ghostHideTyping)
+        case .lumenGhostReadOnReply:
+            LumenSettings.shared.set(value, for: .ghostReadOnReply)
         case .lumenSaveDeletedMessages:
             LumenSettings.shared.set(value, for: .saveDeletedMessages)
         case .lumenSaveEditHistory:
