@@ -440,19 +440,21 @@ public final class LumenPluginManager: ObservableObject {
                 guard let plugin = self.loaded[id] else {
                     continue
                 }
-                let payload = self.messageObject(in: plugin.context, accountPeerId: message.accountPeerId, peerId: message.peerId, messageId: message.messageId, text: message.text, authorId: message.authorId)
+                let payload = self.messageObject(in: plugin.context, accountPeerId: message.accountPeerId, peerId: message.peerId, messageId: message.messageId, text: message.text, authorId: message.authorId, chatType: message.chatType)
                 self.call(plugin, "onIncomingMessage", [payload])
             }
         }
     }
 
-    private func messageObject(in context: JSContext, accountPeerId: Int64, peerId: Int64, messageId: Int32, text: String, authorId: Int64?) -> JSValue {
+    private func messageObject(in context: JSContext, accountPeerId: Int64, peerId: Int64, messageId: Int32, text: String, authorId: Int64?, chatType: String?) -> JSValue {
         let object = JSValue(newObjectIn: context)!
         object.setObject(text, forKeyedSubscript: "text" as NSString)
         object.setObject(String(peerId), forKeyedSubscript: "peerId" as NSString)
         object.setObject(Int(messageId), forKeyedSubscript: "messageId" as NSString)
         let authorValue: Any = authorId.map { String($0) as Any } ?? NSNull()
         object.setObject(authorValue, forKeyedSubscript: "authorId" as NSString)
+        let chatTypeValue: Any = chatType.map { $0 as Any } ?? NSNull()
+        object.setObject(chatTypeValue, forKeyedSubscript: "chatType" as NSString)
         let reply: @convention(block) (String) -> Void = { replyText in
             LumenHooks.sendText?(accountPeerId, peerId, replyText)
         }
@@ -497,7 +499,7 @@ public final class LumenPluginManager: ObservableObject {
                 return
             }
             self.activeAccountPeerId = message.accountPeerId
-            let payload = self.messageObject(in: plugin.context, accountPeerId: message.accountPeerId, peerId: message.peerId, messageId: message.messageId, text: message.text, authorId: nil)
+            let payload = self.messageObject(in: plugin.context, accountPeerId: message.accountPeerId, peerId: message.peerId, messageId: message.messageId, text: message.text, authorId: nil, chatType: nil)
             onClick.call(withArguments: [payload])
             self.publishSoon()
         }

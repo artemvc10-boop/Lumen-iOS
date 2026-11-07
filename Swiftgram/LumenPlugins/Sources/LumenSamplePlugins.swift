@@ -41,16 +41,19 @@ enum LumenSamplePlugins {
     """#
 
     static let autoreply = #"""
-    // Answers private messages while it is on, once per chat per hour.
+    // Answers private messages while it is on, once per chat per hour. Never in groups or channels.
     Lumen.register({
         name: "Автоответчик",
         author: "Lumen",
         version: "1.0",
-        description: "Отвечает на входящие сообщения заданным текстом, не чаще раза в час на чат.",
+        description: "Отвечает в личных чатах заданным текстом, не чаще раза в час на чат. В группах и каналах молчит.",
         settings: [
             { type: "text", key: "text", title: "Текст ответа", default: "Я сейчас занят, отвечу позже." },
         ],
         onIncomingMessage(message) {
+            if (message.chatType !== "private") {
+                return;
+            }
             const key = "last_" + message.peerId;
             const now = Date.now();
             const last = Lumen.storage.get(key) || 0;

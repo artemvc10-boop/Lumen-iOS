@@ -28,7 +28,8 @@ Lumen.register({
     },
 
     // На каждое входящее сообщение.
-    onIncomingMessage(message) { // { text, peerId, messageId, authorId, reply(text) }
+    onIncomingMessage(message) { // { text, peerId, messageId, authorId, chatType, reply(text) }
+                                 // chatType: "private", "group", "channel", "secret"
     },
 
     // Пункты меню сообщения (долгое нажатие → Lumen).
