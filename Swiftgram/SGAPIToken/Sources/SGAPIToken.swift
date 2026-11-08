@@ -15,8 +15,12 @@ public enum SGAPITokenError {
 }
 
 public func getSGApiToken(context: AccountContext, botUsername: String = SG_CONFIG.botUsername) -> Signal<String, SGAPITokenError> {
+    // MARK: Lumen: never sign in to Swiftgram's servers through the user's account.
+    if ({ return true }()) {
+        return .fail(.generic("Swiftgram API is disabled in Lumen"))
+    }
     let userId = context.account.peerId.id._internalGetInt64Value()
-    
+
     if let (token, expiration) = tokenCache[userId], Date() < expiration {
         // SGLogger.shared.log("SGAPI", "Using cached token. Expiring at: \(expiration)")
         return Signal { subscriber in

@@ -65,6 +65,10 @@ public class SGLocalizationManager {
     }
     
     public func downloadLocale(_ locale: String) {
+        // MARK: Lumen: Swiftgram's published strings would override ours (and say "Swiftgram").
+        if ({ return true }()) {
+            return
+        }
         #if DEBUG
         SGLogger.shared.log("Strings", "DEBUG ignoring locale download: \(locale)")
         if ({ return true }()) {

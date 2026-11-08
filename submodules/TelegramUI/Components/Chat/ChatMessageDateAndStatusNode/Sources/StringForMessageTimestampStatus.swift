@@ -1,4 +1,5 @@
 import Foundation
+import SGSimpleSettings
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -267,6 +268,9 @@ public func stringForMessageTimestampStatus(
 ) -> String {
     let result = lumenBaseStringForMessageTimestampStatus(context: context, message: message, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, strings: strings, format: format, associatedData: associatedData, ignoreAuthor: ignoreAuthor)
     var prefix = ""
+    if !LumenSettings.shared.showRetentionMarkers {
+        return result
+    }
     if message.attributes.contains(where: { $0 is LumenViewOnceMessageAttribute }) {
         prefix += "🔥 "
     }

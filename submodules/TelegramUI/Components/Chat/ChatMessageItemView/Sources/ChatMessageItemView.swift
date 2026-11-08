@@ -708,6 +708,12 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             }
         }
         self.wasFilteredKeywordTested = true
+
+        // MARK: Lumen
+        if self.matchedFilterKeyword == nil {
+            let isKept = item.message.lumenDeletedDate != nil || item.message.lumenIsKeptViewOnce
+            self.alpha = isKept && LumenSettings.shared.translucentDeletedMessages ? 0.5 : 1.0
+        }
     }
     
     open func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {

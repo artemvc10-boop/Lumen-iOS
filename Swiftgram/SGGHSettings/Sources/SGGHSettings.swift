@@ -6,6 +6,10 @@ import TelegramCore
 
 
 public func updateSGGHSettingsInteractivelly(context: AccountContext) {
+    // MARK: Lumen: Swiftgram's remote settings carry its announcements and banners.
+    if ({ return true }()) {
+        return
+    }
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let locale = presentationData.strings.baseLanguageCode
     let _ = Task {

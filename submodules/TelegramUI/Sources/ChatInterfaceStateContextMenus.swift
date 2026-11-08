@@ -1593,14 +1593,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if !message.lumenEditHistory.isEmpty {
             actions.append(sgMakeContextMenuAction(.lumenEditHistory(controllerInteraction: controllerInteraction), chatPresentationInterfaceState: chatPresentationInterfaceState, message: message))
         }
-        for pluginItem in LumenPluginManager.shared.messageMenuItems() {
-            let pluginContext = LumenPluginMessageContext(accountPeerId: context.account.peerId.toInt64(), peerId: message.id.peerId.toInt64(), messageId: message.id.id, text: message.text)
-            sgActions.append(.action(ContextMenuActionItem(text: pluginItem.title, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                f(.default)
-                LumenPluginManager.shared.performMenuItem(pluginItem, message: pluginContext)
-            })))
+        let lumenMessageMenuItems = LumenPluginManager.shared.menuItems.filter { $0.kind == .message }
+        if !lumenMessageMenuItems.isEmpty {
+            let hasMedia = message.media.contains { !($0 is TelegramMediaWebpage) && !($0 is TelegramMediaAction) }
+            let pluginContext = LumenPluginMessageContext(accountPeerId: context.account.peerId.toInt64(), dialogId: lumenDialogId(peerId: message.id.peerId), messageId: message.id.id, text: message.text, hasMedia: hasMedia)
+            for pluginItem in lumenMessageMenuItems {
+                sgActions.append(.action(ContextMenuActionItem(text: pluginItem.title, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    f(.default)
+                    LumenPluginManager.shared.performMenuItem(pluginItem, context: pluginContext)
+                })))
+            }
         }
         //
         

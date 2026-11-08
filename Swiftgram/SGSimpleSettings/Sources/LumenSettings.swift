@@ -32,6 +32,16 @@ public final class LumenSettings {
         case allowScreenshots = "lumen.content.screenshots"
         /// Do not load sponsored messages in channels and bots.
         case hideSponsoredMessages = "lumen.ads.hideSponsored"
+        /// Draw kept deleted and view-once messages half transparent.
+        case translucentDeletedMessages = "lumen.ui.translucentDeleted"
+        /// Prefix the time of kept messages with 🗑 / 🔥.
+        case showRetentionMarkers = "lumen.ui.markers"
+        /// The 👻 button in the chat list header.
+        case ghostButtonInHeader = "lumen.ui.ghostButton"
+        /// Hide the "edited" label on messages.
+        case hideEditedMark = "lumen.ui.hideEdited"
+        /// Install plugins that are not on the verified list.
+        case allowUnverifiedPlugins = "lumen.plugins.unverified"
     }
 
     private static let defaultValues: [String: Any] = [
@@ -47,6 +57,11 @@ public final class LumenSettings {
         Key.unlockProtectedContent.rawValue: true,
         Key.allowScreenshots.rawValue: true,
         Key.hideSponsoredMessages.rawValue: true,
+        Key.translucentDeletedMessages.rawValue: true,
+        Key.showRetentionMarkers.rawValue: true,
+        Key.ghostButtonInHeader.rawValue: true,
+        Key.hideEditedMark.rawValue: false,
+        Key.allowUnverifiedPlugins.rawValue: false,
     ]
 
     private let store: UserDefaults
@@ -94,4 +109,9 @@ public final class LumenSettings {
     public var unlockProtectedContent: Bool { return self.value(.unlockProtectedContent) }
     public var allowScreenshots: Bool { return self.value(.allowScreenshots) }
     public var hideSponsoredMessages: Bool { return self.value(.hideSponsoredMessages) }
+    public var translucentDeletedMessages: Bool { return self.value(.translucentDeletedMessages) }
+    public var showRetentionMarkers: Bool { return self.value(.showRetentionMarkers) }
+    public var ghostButtonInHeader: Bool { return self.value(.ghostButtonInHeader) }
+    public var hideEditedMark: Bool { return self.value(.hideEditedMark) }
+    public var allowUnverifiedPlugins: Bool { return self.value(.allowUnverifiedPlugins) }
 }

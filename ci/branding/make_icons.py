@@ -87,6 +87,23 @@ def main():
         '{\n  "images" : [\n    {\n      "filename" : "Lumen.png",\n      "idiom" : "universal",\n'
         '      "scale" : "1x"\n    }\n  ],\n  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  }\n}\n',
         encoding='utf-8')
+    # Context menu glyph: a template image, tinted by the menu, so only its alpha matters.
+    menu = root / 'Swiftgram/SGSettingsUI/Images.xcassets/SwiftgramContextMenu.imageset'
+    for old in menu.glob('*.pdf'):
+        old.unlink()
+    big = 1080
+    glyph = Image.new('L', (big, big), 0)
+    draw = ImageDraw.Draw(glyph)
+    for cx, cy, r, waist in SPARKLES:
+        draw.polygon(sparkle_points(cx, cy, r, waist, 1.0), fill=255)
+    template = Image.new('RGBA', (big, big), (0, 0, 0, 0))
+    template.paste(Image.new('RGBA', (big, big), (0, 0, 0, 255)), mask=glyph)
+    template.resize((72, 72), Image.LANCZOS).save(menu / 'lumen_context_menu.png')
+    (menu / 'Contents.json').write_text(
+        '{\n  "images" : [\n    {\n      "filename" : "lumen_context_menu.png",\n      "idiom" : "universal",\n'
+        '      "scale" : "3x"\n    }\n  ],\n  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  },\n'
+        '  "properties" : {\n    "template-rendering-intent" : "template"\n  }\n}\n',
+        encoding='utf-8')
     print('icons written')
 
 

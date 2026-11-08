@@ -301,3 +301,17 @@
 "Lumen.Content.HideAds" = "Скрывать рекламу в каналах";
 "Lumen.Plugins.Title" = "🧩 Плагины";
 "Lumen.Ghost.ReadOnReply" = "Читать чат, когда отвечаю";
+
+"Lumen.Page.Ghost" = "Призрак";
+"Lumen.Page.Saving" = "Сохранение и контент";
+"Lumen.Page.Appearance" = "Внешний вид";
+"Lumen.Page.Chats" = "Чаты и меню";
+"Lumen.Page.Media" = "Медиа";
+"Lumen.Page.Profiles" = "Профили и истории";
+"Lumen.Page.Other" = "Другое";
+"Lumen.Appearance.Header" = "СООБЩЕНИЯ LUMEN";
+"Lumen.Appearance.TranslucentDeleted" = "Полупрозрачные удалённые";
+"Lumen.Appearance.Markers" = "Значки 🗑 и 🔥 у времени";
+"Lumen.Appearance.HideEdited" = "Скрыть пометку «изменено»";
+"Lumen.Appearance.GhostButton" = "Кнопка 👻 в списке чатов";
+"Lumen.Appearance.Notice" = "Удалённые собеседником и одноразовые сообщения отображаются полупрозрачными и со значком.";

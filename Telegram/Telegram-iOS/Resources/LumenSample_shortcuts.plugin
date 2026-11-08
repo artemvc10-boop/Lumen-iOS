@@ -1,0 +1,45 @@
+"""Replaces shortcuts in the messages you send: :shrug becomes ¯\\_(ツ)_/¯ and so on."""
+from base_plugin import BasePlugin, HookResult, HookStrategy
+from ui.settings import Header, Switch, Divider
+
+__id__ = "lumen_shortcuts"
+__name__ = "Шорткаты"
+__description__ = "Заменяет :shrug, :lenny, :flip и другие на смайлики при отправке."
+__author__ = "Lumen"
+__version__ = "1.0"
+__icon__ = "msg_emoji"
+__min_version__ = "11.12.0"
+
+SHORTCUTS = {
+    ":shrug": "¯\\_(ツ)_/¯",
+    ":lenny": "( ͡° ͜ʖ ͡°)",
+    ":flip": "(╯°□°)╯︵ ┻━┻",
+    ":unflip": "┬─┬ノ( º _ ºノ)",
+    ":heart": "❤️",
+}
+
+
+class ShortcutsPlugin(BasePlugin):
+    def on_plugin_load(self):
+        self.add_on_send_message_hook()
+
+    def create_settings(self):
+        return [
+            Header(text="Шорткаты"),
+            Switch(key="upper", text="КАПС для сообщений с «!»", default=False, subtext="«!привет» отправится как «ПРИВЕТ»"),
+            Divider(text="Доступно: " + ", ".join(SHORTCUTS.keys())),
+        ]
+
+    def on_send_message_hook(self, account, params):
+        text = params.message
+        if not isinstance(text, str) or not text:
+            return HookResult()
+        updated = text
+        for key, value in SHORTCUTS.items():
+            updated = updated.replace(key, value)
+        if self.get_setting("upper", False) and updated.startswith("!"):
+            updated = updated[1:].upper()
+        if updated == text:
+            return HookResult()
+        params.message = updated
+        return HookResult(strategy=HookStrategy.MODIFY, params=params)

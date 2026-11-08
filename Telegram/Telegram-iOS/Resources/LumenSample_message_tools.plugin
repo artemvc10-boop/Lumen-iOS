@@ -1,0 +1,46 @@
+"""Adds actions to the message menu (long press → Lumen)."""
+from base_plugin import BasePlugin, MenuItemData, MenuItemType
+from client_utils import send_message
+from android_utils import copy_to_clipboard
+from ui.alert import AlertDialogBuilder
+from ui.bulletin import BulletinHelper
+
+__id__ = "lumen_message_tools"
+__name__ = "Инструменты сообщений"
+__description__ = "Пункты в меню сообщения: длина текста, перевёрнутый текст, копирование капсом."
+__author__ = "Lumen"
+__version__ = "1.0"
+__icon__ = "msg_edit"
+__min_version__ = "11.12.0"
+
+
+def _text(context):
+    message = context.get("message")
+    if message is None:
+        return ""
+    return message.messageOwner.message or ""
+
+
+class MessageToolsPlugin(BasePlugin):
+    def on_plugin_load(self):
+        self.add_menu_item(MenuItemData(menu_type=MenuItemType.MESSAGE_CONTEXT_MENU, text="Длина текста", on_click=self.show_length, icon="msg_info"))
+        self.add_menu_item(MenuItemData(menu_type=MenuItemType.MESSAGE_CONTEXT_MENU, text="Отправить задом наперёд", on_click=self.send_reversed, icon="msg_replace"))
+        self.add_menu_item(MenuItemData(menu_type=MenuItemType.MESSAGE_CONTEXT_MENU, text="Скопировать капсом", on_click=self.copy_upper, icon="msg_copy"))
+
+    def show_length(self, context):
+        text = _text(context)
+        words = len([w for w in text.split() if w])
+        builder = AlertDialogBuilder()
+        builder.set_title("Длина текста")
+        builder.set_message("Символов: " + str(len(text)) + "\nСлов: " + str(words))
+        builder.set_positive_button("OK", lambda b, w: b.dismiss())
+        builder.show()
+
+    def send_reversed(self, context):
+        text = _text(context)
+        if text:
+            send_message({"peer": context.get("dialog_id"), "message": text[::-1]})
+
+    def copy_upper(self, context):
+        copy_to_clipboard(_text(context).upper())
+        BulletinHelper.show_copied_to_clipboard()

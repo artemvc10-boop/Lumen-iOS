@@ -25,8 +25,22 @@ import PeerNameColorScreen
 import UndoUI
 
 
+// MARK: Lumen: the settings are split into pages, like the Android mods do.
+public enum LumenSettingsPage {
+    case root
+    case ghost
+    case saving
+    case appearance
+    case chats
+    case media
+    case profiles
+    case other
+}
+
 private enum SGControllerSection: Int32, SGItemListSection {
     case search
+    case lumenPages // MARK: Lumen
+    case lumenAppearance // MARK: Lumen
     case trending
     case plugins // MARK: Lumen
     case ghost // MARK: Lumen
@@ -63,6 +77,10 @@ private enum SGBoolSetting: String {
     case lumenUnlockProtected
     case lumenAllowScreenshots
     case lumenHideSponsored
+    case lumenTranslucentDeleted
+    case lumenRetentionMarkers
+    case lumenGhostButton
+    case lumenHideEdited
     //
     case hidePhoneInSettings
     case showTabNames
@@ -146,6 +164,14 @@ private enum SGSliderSetting: String {
 
 private enum SGDisclosureLink: String {
     case lumenPlugins // MARK: Lumen
+    case lumenPageGhost
+    case lumenPageSaving
+    case lumenPageAppearance
+    case lumenPageChats
+    case lumenPageMedia
+    case lumenPageProfiles
+    case lumenPageOther
+    case lumenPagePluginsShortcut
     case contentSettings
     case languageSettings
 }
@@ -160,6 +186,74 @@ private struct SGSettingsControllerState: Equatable {
 }
 
 private typealias SGControllerEntry = SGItemListUIEntry<SGControllerSection, SGBoolSetting, SGSliderSetting, SGOneFromManySetting, SGDisclosureLink, AnyHashable>
+
+private extension SGControllerSection {
+    var lumenPage: LumenSettingsPage {
+        switch self {
+        case .search, .lumenPages, .plugins:
+            return .root
+        case .ghost:
+            return .ghost
+        case .history, .lumenContent:
+            return .saving
+        case .lumenAppearance, .tabs, .folders, .chatList, .accountColors:
+            return .appearance
+        case .contextMenu, .translation:
+            return .chats
+        case .photo, .stickers, .videoNotes, .voiceMessages:
+            return .media
+        case .profiles, .stories:
+            return .profiles
+        case .trending, .content, .calls, .other:
+            return .other
+        }
+    }
+}
+
+private func lumenPageTitle(_ page: LumenSettingsPage, lang: String) -> String {
+    switch page {
+    case .root:
+        return "Lumen"
+    case .ghost:
+        return i18n("Lumen.Page.Ghost", lang)
+    case .saving:
+        return i18n("Lumen.Page.Saving", lang)
+    case .appearance:
+        return i18n("Lumen.Page.Appearance", lang)
+    case .chats:
+        return i18n("Lumen.Page.Chats", lang)
+    case .media:
+        return i18n("Lumen.Page.Media", lang)
+    case .profiles:
+        return i18n("Lumen.Page.Profiles", lang)
+    case .other:
+        return i18n("Lumen.Page.Other", lang)
+    }
+}
+
+private func lumenPageEntries(page: LumenSettingsPage, presentationData: PresentationData, callListSettings: CallListSettings, experimentalUISettings: ExperimentalUISettings, appConfiguration: AppConfiguration, nameColors: PeerNameColors, state: SGSettingsControllerState) -> [SGControllerEntry] {
+    let all = SGControllerEntries(presentationData: presentationData, callListSettings: callListSettings, experimentalUISettings: experimentalUISettings, appConfiguration: appConfiguration, nameColors: nameColors, state: state)
+    let lang = presentationData.strings.baseLanguageCode
+    if page != .root {
+        return all.filter { SGControllerSection(rawValue: $0.section)?.lumenPage == page }
+    }
+    if let query = state.searchQuery, !query.isEmpty {
+        // Searching from the root page looks through every page.
+        return all
+    }
+    var entries: [SGControllerEntry] = all.filter { $0.section == SGControllerSection.search.rawValue }
+    let id = SGItemListCounter()
+    id.increment(100000)
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPageGhost, text: "👻  " + lumenPageTitle(.ghost, lang: lang)))
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPageSaving, text: "🗑  " + lumenPageTitle(.saving, lang: lang)))
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPagePluginsShortcut, text: i18n("Lumen.Plugins.Title", lang)))
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPageAppearance, text: "🎨  " + lumenPageTitle(.appearance, lang: lang)))
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPageChats, text: "💬  " + lumenPageTitle(.chats, lang: lang)))
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPageMedia, text: "🖼  " + lumenPageTitle(.media, lang: lang)))
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPageProfiles, text: "👤  " + lumenPageTitle(.profiles, lang: lang)))
+    entries.append(.disclosure(id: id.count, section: .lumenPages, link: .lumenPageOther, text: "⚙️  " + lumenPageTitle(.other, lang: lang)))
+    return entries
+}
 
 private func SGControllerEntries(presentationData: PresentationData, callListSettings: CallListSettings, experimentalUISettings: ExperimentalUISettings, appConfiguration: AppConfiguration, nameColors: PeerNameColors, state: SGSettingsControllerState) -> [SGControllerEntry] {
     
@@ -204,6 +298,12 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.toggle(id: id.count, section: .lumenContent, settingName: .lumenAllowScreenshots, value: ghost.allowScreenshots, text: i18n("Lumen.Content.Screenshots", lang), enabled: true))
     entries.append(.toggle(id: id.count, section: .lumenContent, settingName: .lumenHideSponsored, value: ghost.hideSponsoredMessages, text: i18n("Lumen.Content.HideAds", lang), enabled: true))
     entries.append(.notice(id: id.count, section: .lumenContent, text: i18n("Lumen.Content.Notice", lang)))
+    entries.append(.header(id: id.count, section: .lumenAppearance, text: i18n("Lumen.Appearance.Header", lang), badge: nil))
+    entries.append(.toggle(id: id.count, section: .lumenAppearance, settingName: .lumenTranslucentDeleted, value: ghost.translucentDeletedMessages, text: i18n("Lumen.Appearance.TranslucentDeleted", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .lumenAppearance, settingName: .lumenRetentionMarkers, value: ghost.showRetentionMarkers, text: i18n("Lumen.Appearance.Markers", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .lumenAppearance, settingName: .lumenHideEdited, value: ghost.hideEditedMark, text: i18n("Lumen.Appearance.HideEdited", lang), enabled: true))
+    entries.append(.toggle(id: id.count, section: .lumenAppearance, settingName: .lumenGhostButton, value: ghost.ghostButtonInHeader, text: i18n("Lumen.Appearance.GhostButton", lang), enabled: true))
+    entries.append(.notice(id: id.count, section: .lumenAppearance, text: i18n("Lumen.Appearance.Notice", lang)))
     //
 
     if appConfiguration.sgWebSettings.global.canEditSettings {
@@ -378,7 +478,7 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     return filterSGItemListUIEntrires(entries: entries, by: state.searchQuery)
 }
 
-public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int? = nil*/) -> ViewController {
+public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int? = nil*/, page: LumenSettingsPage = .root) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
 //    var getRootControllerImpl: (() -> UIViewController?)?
@@ -437,6 +537,14 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             LumenSettings.shared.set(value, for: .allowScreenshots)
         case .lumenHideSponsored:
             LumenSettings.shared.set(value, for: .hideSponsoredMessages)
+        case .lumenTranslucentDeleted:
+            LumenSettings.shared.set(value, for: .translucentDeletedMessages)
+        case .lumenRetentionMarkers:
+            LumenSettings.shared.set(value, for: .showRetentionMarkers)
+        case .lumenHideEdited:
+            LumenSettings.shared.set(value, for: .hideEditedMark)
+        case .lumenGhostButton:
+            LumenSettings.shared.set(value, for: .ghostButtonInHeader)
         //
         case .hidePhoneInSettings:
             SGSimpleSettings.shared.hidePhoneInSettings = value
@@ -765,10 +873,24 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
         }
         switch (link) {
             // MARK: Lumen
-            case .lumenPlugins:
+            case .lumenPlugins, .lumenPagePluginsShortcut:
                 if #available(iOS 14.0, *) {
                     pushControllerImpl?(lumenPluginsController(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
                 }
+            case .lumenPageGhost:
+                pushControllerImpl?(sgSettingsController(context: context, page: .ghost))
+            case .lumenPageSaving:
+                pushControllerImpl?(sgSettingsController(context: context, page: .saving))
+            case .lumenPageAppearance:
+                pushControllerImpl?(sgSettingsController(context: context, page: .appearance))
+            case .lumenPageChats:
+                pushControllerImpl?(sgSettingsController(context: context, page: .chats))
+            case .lumenPageMedia:
+                pushControllerImpl?(sgSettingsController(context: context, page: .media))
+            case .lumenPageProfiles:
+                pushControllerImpl?(sgSettingsController(context: context, page: .profiles))
+            case .lumenPageOther:
+                pushControllerImpl?(sgSettingsController(context: context, page: .other))
             case .languageSettings:
                 pushControllerImpl?(context.sharedContext.makeLocalizationListController(context: context))
             case .contentSettings:
@@ -804,9 +926,9 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
         let callListSettings: CallListSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings]?.get(CallListSettings.self) ?? CallListSettings.defaultSettings
         let experimentalUISettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
-        let entries = SGControllerEntries(presentationData: presentationData, callListSettings: callListSettings, experimentalUISettings: experimentalUISettings, appConfiguration: appConfiguration, nameColors: PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors), state: state)
+        let entries = lumenPageEntries(page: page, presentationData: presentationData, callListSettings: callListSettings, experimentalUISettings: experimentalUISettings, appConfiguration: appConfiguration, nameColors: PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors), state: state)
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Lumen"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(lumenPageTitle(page, lang: presentationData.strings.baseLanguageCode)), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         
         // TODO(swiftgram): focusOnItemTag support
         /* var index = 0

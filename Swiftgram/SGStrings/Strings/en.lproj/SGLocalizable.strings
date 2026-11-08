@@ -306,3 +306,17 @@
 "Lumen.Content.HideAds" = "Hide Sponsored Messages";
 "Lumen.Plugins.Title" = "Plugins";
 "Lumen.Ghost.ReadOnReply" = "Mark Read When Replying";
+
+"Lumen.Page.Ghost" = "Ghost Mode";
+"Lumen.Page.Saving" = "Saving & Content";
+"Lumen.Page.Appearance" = "Appearance";
+"Lumen.Page.Chats" = "Chats & Menus";
+"Lumen.Page.Media" = "Media";
+"Lumen.Page.Profiles" = "Profiles & Stories";
+"Lumen.Page.Other" = "Other";
+"Lumen.Appearance.Header" = "LUMEN MESSAGES";
+"Lumen.Appearance.TranslucentDeleted" = "Translucent Deleted Messages";
+"Lumen.Appearance.Markers" = "🗑 and 🔥 Next to Time";
+"Lumen.Appearance.HideEdited" = "Hide \"edited\" Label";
+"Lumen.Appearance.GhostButton" = "👻 Button in Chat List";
+"Lumen.Appearance.Notice" = "Messages deleted by others and view-once media are shown translucent and marked.";

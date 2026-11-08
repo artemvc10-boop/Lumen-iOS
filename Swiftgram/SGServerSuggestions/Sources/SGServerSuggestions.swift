@@ -17,6 +17,10 @@ public func dismissSGProvidedSuggestion(suggestionId: String) {
 }
 
 public func getSGProvidedSuggestions(account: Account) -> Signal<Data?, NoError> {
+    // MARK: Lumen: no Swiftgram announcements, including ones cached before the rebrand.
+    if ({ return true }()) {
+        return .single(nil)
+    }
     let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
 
     return combineLatest(account.postbox.combinedView(keys: [key]), sgDismissedSuggestionsPromise.get())

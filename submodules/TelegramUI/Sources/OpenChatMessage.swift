@@ -2,6 +2,7 @@ import Foundation
 import MediaPlayer
 import AVFAudio
 import SGSimpleSettings
+import LumenPlugins
 import Display
 import AsyncDisplayKit
 import TelegramCore
@@ -234,6 +235,21 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .document(file, immediateShare):
                 params.dismissInput()
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
+                // MARK: Lumen: tapping a .plugin file offers to install it.
+                if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "plugin", !immediateShare {
+                    let account = params.context.account
+                    let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .peer(params.message.id.peerId), userContentType: .file, reference: MediaResourceReference.media(media: AnyMediaReference.message(message: MessageReference(params.message), media: file), resource: file.resource)).start()
+                    let _ = (account.postbox.mediaBox.resourceData(file.resource)
+                    |> filter { $0.complete }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { data in
+                        fetched.dispose()
+                        if let source = try? String(contentsOfFile: data.path, encoding: .utf8) {
+                            LumenInstallCoordinator.present(source: source, suggestedName: (fileName as NSString).deletingPathExtension)
+                        }
+                    })
+                    return true
+                }
                 if immediateShare {
                     let controller = params.context.sharedContext.makeShareScreen(context: params.context, params: ShareControllerParams(subject: .media(.standalone(media: file), nil), immediateExternalShare: true))
                     params.present(controller, nil, .window(.root))

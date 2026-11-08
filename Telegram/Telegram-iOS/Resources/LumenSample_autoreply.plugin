@@ -1,0 +1,39 @@
+"""Answers private messages while it is on, once per chat per hour. Never in groups or channels."""
+import time
+
+from base_plugin import BasePlugin
+from client_utils import send_message
+from ui.settings import Header, Input, Divider
+
+__id__ = "lumen_autoreply"
+__name__ = "Автоответчик"
+__description__ = "Отвечает в личных чатах заданным текстом, не чаще раза в час на чат. В группах и каналах молчит."
+__author__ = "Lumen"
+__version__ = "1.0"
+__icon__ = "msg_reply"
+__min_version__ = "11.12.0"
+
+
+class AutoreplyPlugin(BasePlugin):
+    def on_plugin_load(self):
+        self.add_hook("TL_updateNewMessage")
+        self._last = {}
+
+    def create_settings(self):
+        return [
+            Header(text="Автоответчик"),
+            Input(key="text", text="Текст ответа", default="Я сейчас занят, отвечу позже."),
+            Divider(text="Отвечает только в личных чатах и не чаще раза в час на каждый чат."),
+        ]
+
+    def on_update_hook(self, update_name, account, update):
+        message = update.message
+        if message.out or message.chat_type != "private":
+            return
+        dialog_id = message.dialog_id
+        now = time.time()
+        if now - self._last.get(dialog_id, 0) < 3600:
+            return
+        self._last[dialog_id] = now
+        send_message({"peer": dialog_id, "message": self.get_setting("text", "Я сейчас занят, отвечу позже.")})
+        self.log("ответил в чат " + str(dialog_id))

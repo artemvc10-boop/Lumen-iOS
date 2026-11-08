@@ -7516,7 +7516,7 @@ private final class ChatListLocationContext {
                 //
                 
                 // MARK: Lumen
-                if case let .chatList(groupId) = self.location, groupId == .root {
+                if case let .chatList(groupId) = self.location, groupId == .root, LumenSettings.shared.ghostButtonInHeader {
                     let ghostEnabled = LumenSettings.shared.ghostMode
                     self.ghostButton = NavigationBarComponent.Button(id: "lumenGhost",
                         content: .text(title: ghostEnabled ? "👻" : "👁", isBold: false),
