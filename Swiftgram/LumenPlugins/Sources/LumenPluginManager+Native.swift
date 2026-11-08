@@ -119,12 +119,14 @@ extension LumenPluginManager {
         case "screen":
             return LumenScreenInfo.current()
         case "getAppSetting":
-            return LumenPluginManager.appSettingReader?(arg["key"] as? String ?? "") ?? NSNull()
+            return self.appSettingValue(arg["key"] as? String ?? "") ?? NSNull()
         case "setAppSetting":
             guard let key = arg["key"] as? String, let value = arg["value"] else {
                 return false
             }
-            return LumenPluginManager.appSettingWriter?(key, value) ?? false
+            return self.setAppSettingValue(key, value)
+        case "appSettingKeys":
+            return LumenSettingsBridge.allKeys()
         default:
             return nil
         }
