@@ -95,7 +95,18 @@ jobs:
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
           APP_BUNDLE_ID: ${{ vars.APP_BUNDLE_ID }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
-        run: python -u ci/lumen_ci.py --source . --output artifacts
+        run: |
+          # Transient GitHub 504s on release downloads break the Bazel fetch; retry the build.
+          for attempt in 1 2 3 4; do
+            if python -u ci/lumen_ci.py --source . --output artifacts; then
+              exit 0
+            fi
+            echo "::warning::Build attempt $attempt failed; cleaning partial downloads and retrying"
+            rm -f build-input/bazel-*-darwin-* || true
+            sleep 30
+          done
+          echo "::error::Build failed after retries"
+          exit 1
 
       # Saved even after a failure, so the next run only recompiles what is left.
       - uses: actions/cache/save@v4
