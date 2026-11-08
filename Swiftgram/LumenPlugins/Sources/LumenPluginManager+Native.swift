@@ -149,9 +149,10 @@ extension LumenPluginManager {
         case "localtime":
             let seconds = (arg["t"] as? Double) ?? Date().timeIntervalSince1970
             let date = Date(timeIntervalSince1970: seconds)
-            let c = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second, .weekday, .dayOfYear], from: date)
+            let c = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second, .weekday], from: date)
             let weekday = ((c.weekday ?? 1) + 5) % 7 // Python: Monday = 0
-            return [c.year ?? 1970, c.month ?? 1, c.day ?? 1, c.hour ?? 0, c.minute ?? 0, c.second ?? 0, weekday, c.dayOfYear ?? 1, 0]
+            let yday = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+            return [c.year ?? 1970, c.month ?? 1, c.day ?? 1, c.hour ?? 0, c.minute ?? 0, c.second ?? 0, weekday, yday, 0]
         case "mktime":
             let parts = (arg["parts"] as? [Int]) ?? []
             var components = DateComponents()

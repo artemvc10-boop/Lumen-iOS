@@ -120,7 +120,7 @@ private struct LumenPluginSettingRow: View {
             Toggle(isOn: Binding(get: { isOn }, set: { value in
                 isOn = value
                 if let key = item.key {
-                    manager.setSettingValue(id: pluginId, key: key, value: value)
+                    manager.setSettingValue(pluginId: pluginId, key: key, value: value)
                     manager.fireSettingEvent(id: pluginId, handle: item.handle, value: value)
                 }
             })) {
@@ -128,7 +128,7 @@ private struct LumenPluginSettingRow: View {
             }
             .onAppear {
                 if let key = item.key {
-                    isOn = (manager.settingValue(id: pluginId, key: key) as? Bool) ?? item.defaultBool ?? false
+                    isOn = (manager.settingValue(pluginId: pluginId, key: key) as? Bool) ?? item.defaultBool ?? false
                 }
             }
         case "input", "edit_text":
@@ -140,7 +140,7 @@ private struct LumenPluginSettingRow: View {
             }
             .onAppear {
                 if let key = item.key {
-                    text = (manager.settingValue(id: pluginId, key: key) as? String) ?? item.defaultString ?? ""
+                    text = (manager.settingValue(pluginId: pluginId, key: key) as? String) ?? item.defaultString ?? ""
                 }
             }
             .onDisappear { commitText() }
@@ -148,7 +148,7 @@ private struct LumenPluginSettingRow: View {
             Picker(item.text, selection: Binding(get: { selection }, set: { value in
                 selection = value
                 if let key = item.key {
-                    manager.setSettingValue(id: pluginId, key: key, value: value)
+                    manager.setSettingValue(pluginId: pluginId, key: key, value: value)
                     manager.fireSettingEvent(id: pluginId, handle: item.handle, value: value)
                 }
             })) {
@@ -158,7 +158,7 @@ private struct LumenPluginSettingRow: View {
             }
             .onAppear {
                 if let key = item.key {
-                    selection = (manager.settingValue(id: pluginId, key: key) as? Int) ?? item.defaultInt ?? 0
+                    selection = (manager.settingValue(pluginId: pluginId, key: key) as? Int) ?? item.defaultInt ?? 0
                 }
             }
         case "text":
@@ -190,7 +190,7 @@ private struct LumenPluginSettingRow: View {
 
     private func commitText() {
         if let key = item.key {
-            manager.setSettingValue(id: pluginId, key: key, value: text)
+            manager.setSettingValue(pluginId: pluginId, key: key, value: text)
             manager.fireSettingEvent(id: pluginId, handle: item.handle, value: text)
         }
     }

@@ -293,7 +293,7 @@ extension LumenPluginManager {
 
     // MARK: Samples
 
-    private func installSamplesIfNeeded() {
+    func installSamplesIfNeeded() {
         let flag = "lumen.plugins.samplesInstalledV2"
         if self.defaults.bool(forKey: flag) {
             return
