@@ -62,10 +62,10 @@ jobs:
           for app in /Applications/Xcode*.app; do
             if [[ ! -L "$app" && "$(cd "$app" && pwd -P)" != "$KEEP" ]]; then sudo rm -rf "$app" & fi
           done
-          xcrun simctl delete all 2>/dev/null
-          xcrun simctl runtime delete all 2>/dev/null
+          xcrun simctl delete all 2>/dev/null || true
+          xcrun simctl runtime delete all 2>/dev/null || true
           sudo rm -rf ~/Library/Android /usr/local/share/dotnet ~/.dotnet ~/Library/Developer/CoreSimulator/Caches &
-          wait
+          wait || true
           df -h /
 
       - name: Install the Metal toolchain
