@@ -161,6 +161,10 @@ public final class LumenPluginManager: ObservableObject {
             if self.context != nil {
                 return
             }
+            // Plugins Lumen implements natively; registered before any plugin loads.
+            LumenNativeRegistry.factories[LumenMemeStore.pluginId] = { [weak self] in
+                return LumenMemeLibraryPlugin(manager: self ?? LumenPluginManager.shared)
+            }
             try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
             self.installSamplesIfNeeded()
             self.setupRuntime()
@@ -297,4 +301,10 @@ public protocol LumenNativePlugin: AnyObject {
     func menuItems() -> [LumenPluginMenuItem]
     func performMenuItem(itemId: String, context: LumenPluginMessageContext)
     func settingsItems() -> [LumenPluginSettingItem]
+    func handleSettingEvent(handle: Int, value: Any?)
+}
+
+public extension LumenNativePlugin {
+    func handleSettingEvent(handle: Int, value: Any?) {
+    }
 }

@@ -29,6 +29,10 @@ extension LumenPluginManager {
             return
         }
         if LumenPluginManager.nativePluginIds.contains(id) {
+            if self.nativeHandlers[id] == nil, let handler = LumenNativeRegistry.make(id: id) {
+                self.nativeHandlers[id] = handler
+            }
+            self.errors[id] = nil
             self.loaded.insert(id)
             return
         }
@@ -58,7 +62,9 @@ extension LumenPluginManager {
         if !self.loaded.contains(id) {
             return
         }
-        if !LumenPluginManager.nativePluginIds.contains(id) {
+        if LumenPluginManager.nativePluginIds.contains(id) {
+            self.nativeHandlers[id] = nil
+        } else {
             self.hostCall("unload_plugin", ["id": id])
         }
         self.loaded.remove(id)
@@ -229,6 +235,10 @@ extension LumenPluginManager {
 
     public func fireSettingEvent(id: String, handle: Int, value: Any?) {
         self.queue.async {
+            if let native = self.nativeHandlers[id] {
+                native.handleSettingEvent(handle: handle, value: value)
+                return
+            }
             self.hostCall("settings_event", ["plugin": id, "handle": handle, "value": value ?? NSNull()])
             self.runDeferred()
         }
