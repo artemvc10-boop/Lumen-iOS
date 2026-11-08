@@ -32,10 +32,12 @@ extension LumenPluginManager {
             self.loaded.insert(id)
             return
         }
-        guard let source = self.readSource(id: id) else {
+        guard let raw = self.readSource(id: id) else {
             self.errors[id] = "Файл не найден"
             return
         }
+        // Skulpt's tokenizer wants LF; downloaded plugins may carry CRLF.
+        let source = raw.replacingOccurrences(of: "\r\n", with: "\n")
         try? FileManager.default.createDirectory(at: self.dataDirectory(id: id), withIntermediateDirectories: true)
         self.errors[id] = nil
         let result = self.hostCall("load_plugin", [
@@ -65,7 +67,8 @@ extension LumenPluginManager {
     // MARK: Install / remove / enable
 
     /// Copies a .plugin file in. It starts disabled; `enable` set true also turns it on.
-    public func install(source: String, suggestedName: String, enable: Bool, completion: ((LumenPluginMetadata) -> Void)? = nil) {
+    public func install(source rawSource: String, suggestedName: String, enable: Bool, completion: ((LumenPluginMetadata) -> Void)? = nil) {
+        let source = rawSource.replacingOccurrences(of: "\r\n", with: "\n")
         self.queue.async {
             let meta = LumenPluginMetadata.parse(source: source, fallbackId: LumenPluginManager.sanitized(suggestedName))
             do {
