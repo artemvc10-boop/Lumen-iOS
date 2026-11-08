@@ -115,3 +115,7 @@ class PorterDuffColorFilter(object):
 
 class Canvas(JavaStub):
     pass
+
+
+import _lumen_java
+_lumen_java.fill_module(__name__)

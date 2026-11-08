@@ -61,3 +61,7 @@ class TextUtils(object):
     @staticmethod
     def isEmpty(value):
         return value is None or str(value) == ""
+
+
+import _lumen_java
+_lumen_java.fill_module(__name__)

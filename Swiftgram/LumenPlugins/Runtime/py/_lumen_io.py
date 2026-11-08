@@ -10,7 +10,8 @@ def read_bytes(path):
 
 
 def write_bytes(path, data, append=False):
-    native("fs", action="writeBase64", path=str(path), data=_lumen.b64encode(bytes(data)), append=bool(append))
+    from _lumen_bytearray import as_bytes
+    native("fs", action="writeBase64", path=str(path), data=_lumen.b64encode(as_bytes(data)), append=bool(append))
 
 
 def read_text(path):
@@ -83,7 +84,8 @@ class LumenFile(object):
 
     def write(self, data):
         if self._binary:
-            data = bytes(data)
+            from _lumen_bytearray import as_bytes
+            data = as_bytes(data)
         else:
             data = str(data)
         self._data = self._data[:self._pos] + data + self._data[self._pos + len(data):]

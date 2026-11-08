@@ -1,5 +1,7 @@
 import Foundation
 import UIKit
+import ImageIO
+import AVFoundation
 
 // MARK: Lumen: turns one plugin view-tree node into a UIView. Used by the container that
 // presents AlertDialog.setView / BottomSheet trees. Pragmatic layout, see LumenAndroidView.
@@ -152,7 +154,7 @@ struct LumenAndroidViewBuilder {
         default:
             imageView.contentMode = .scaleAspectFit
         }
-        if let path = props["image"] as? String, let url = self.manager?.resolveImagePath(path, pluginId: self.pluginId), let image = UIImage(contentsOfFile: url.path) {
+        if let path = props["image"] as? String, let url = self.manager?.resolveImagePath(path, pluginId: self.pluginId), let image = LumenImageCache.image(at: url) {
             imageView.image = image
         } else {
             imageView.backgroundColor = UIColor.secondarySystemBackground
@@ -301,6 +303,55 @@ struct LumenAndroidViewBuilder {
         let recognizer = UILongPressGestureRecognizer(target: handler, action: #selector(LumenTapHandler.fireLong(_:)))
         view.addGestureRecognizer(recognizer)
         objc_setAssociatedObject(view, &LumenTapHandler.longKey, handler, .OBJC_ASSOCIATION_RETAIN)
+    }
+}
+
+/// Decoded, downscaled images for plugin views; views are rebuilt often (every keystroke in
+/// a search field), so files must not be decoded again each time.
+enum LumenImageCache {
+    private static let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 300
+        return cache
+    }()
+
+    static func image(at url: URL) -> UIImage? {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let stamp = (attributes?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        let key = "\(url.path)#\(stamp)" as NSString
+        if let cached = self.cache.object(forKey: key) {
+            return cached
+        }
+        guard let image = self.thumbnail(url) else {
+            return nil
+        }
+        self.cache.setObject(image, forKey: key)
+        return image
+    }
+
+    private static func thumbnail(_ url: URL) -> UIImage? {
+        let ext = url.pathExtension.lowercased()
+        if ["mp4", "mov", "m4v", "webm", "3gp", "mkv", "avi"].contains(ext) {
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: 600, height: 600)
+            guard let frame = try? generator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: 600), actualTime: nil) else {
+                return nil
+            }
+            return UIImage(cgImage: frame)
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+            return UIImage(contentsOfFile: url.path)
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 600,
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return UIImage(contentsOfFile: url.path)
+        }
+        return UIImage(cgImage: cgImage)
     }
 }
 

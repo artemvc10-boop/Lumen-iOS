@@ -21,9 +21,35 @@ def view_for(vid):
 
 
 def set_view_text(vid, value):
+    """The person typed into an EditText: store it and run the plugin's TextWatchers."""
     view = _views.get(vid)
-    if view is not None:
-        view._text = "" if value is None else str(value)
+    if view is None:
+        return
+    old = view._text
+    view._text = "" if value is None else str(value)
+    if old == view._text:
+        return
+    import _lumen_host
+    editable = _Editable(view)
+    for plugin_id, watcher in list(view._watchers):
+        for name, args in (("beforeTextChanged", (editable, 0, len(old), len(view._text))),
+                           ("onTextChanged", (editable, 0, len(old), len(view._text))),
+                           ("afterTextChanged", (editable,))):
+            fn = getattr(watcher, name, None)
+            if callable(fn):
+                _lumen_host.run_as(plugin_id, name, fn, *args)
+
+
+# Dialogs and sheets on screen; their trees are re-sent after plugin code changes them.
+_open_dialogs = {}
+
+
+def refresh_open_dialogs():
+    for dialog in list(_open_dialogs.values()):
+        try:
+            dialog._refresh()
+        except Exception:
+            pass
 
 
 def _make_click(listener, view):
@@ -31,6 +57,8 @@ def _make_click(listener, view):
         onClick = getattr(listener, "onClick", None)
         if callable(onClick):
             onClick(view)
+        elif callable(listener):
+            listener(view)
     return run
 
 
@@ -39,6 +67,8 @@ def _make_long_click(listener, view):
         onLongClick = getattr(listener, "onLongClick", None)
         if callable(onLongClick):
             onLongClick(view)
+        elif callable(listener):
+            listener(view)
     return run
 
 
@@ -64,12 +94,19 @@ class View(object):
     class OnFocusChangeListener(object):
         pass
 
-    def __init__(self, context=None):
+    _text = ""
+    _visibility = 0
+    _enabled = True
+
+    def __init__(self, context=None, *args, **kwargs):
         self._vid = _register(self)
         self._children = []
         self._text = ""
         self._props = {}
         self._listeners = {}
+        self._watchers = []
+        self._cb_ids = {}
+        self._tag = None
         self._visibility = View.VISIBLE
         self._enabled = True
 
@@ -77,10 +114,71 @@ class View(object):
     def __getattr__(self, key):
         if key.startswith("__") and key.endswith("__"):
             raise AttributeError(key)
+        # Plugin subclasses that skip super().__init__() still get working internals.
+        if key in ("_children", "_watchers"):
+            value = []
+            object.__setattr__(self, key, value)
+            return value
+        if key in ("_props", "_listeners", "_cb_ids"):
+            value = {}
+            object.__setattr__(self, key, value)
+            return value
+        if key == "_vid":
+            return _register(self)
+        if key == "_tag":
+            return None
+        if key.startswith("_"):
+            raise AttributeError(key)
 
         def setter(*args, **kwargs):
             return _Animator()
         return setter
+
+    def addTextChangedListener(self, watcher):
+        import _lumen_bridge
+        self._watchers.append((_lumen_bridge.current_plugin(), watcher))
+
+    def removeTextChangedListener(self, watcher):
+        self._watchers = [w for w in self._watchers if w[1] is not watcher]
+
+    def setTag(self, *args):
+        self._tag = args[-1] if args else None
+
+    def getTag(self, *args):
+        return self._tag
+
+    def isChecked(self):
+        return bool(self._props.get("checked", False))
+
+    def setChecked(self, value):
+        self._props["checked"] = bool(value)
+
+    def setSelection(self, *args):
+        pass
+
+    def getContext(self):
+        import _lumen_activity
+        return _lumen_activity.current_activity()
+
+    def post(self, runnable):
+        import _lumen_host
+        _lumen_host.defer_runnable(runnable, 0)
+        return True
+
+    def postDelayed(self, runnable, delay):
+        import _lumen_host
+        _lumen_host.defer_runnable(runnable, delay)
+        return True
+
+    def _callback_id(self, event, listener, make):
+        """One persistent callback per (event, listener), reused across re-renders."""
+        cached = self._cb_ids.get(event)
+        if cached is not None and cached[0] is listener:
+            return cached[1]
+        import _lumen_host
+        callback_id = _lumen_host.register_view_callback(make(listener, self))
+        self._cb_ids[event] = (listener, callback_id)
+        return callback_id
 
     def _set(self, key, value):
         self._props[key] = value
@@ -252,10 +350,10 @@ class View(object):
         }
         click = self._listeners.get("click")
         if click is not None:
-            node["clickCallback"] = _lumen_host.register_view_callback(_make_click(click, self))
+            node["clickCallback"] = self._callback_id("click", click, _make_click)
         longClick = self._listeners.get("longClick")
         if longClick is not None:
-            node["longClickCallback"] = _lumen_host.register_view_callback(_make_long_click(longClick, self))
+            node["longClickCallback"] = self._callback_id("longClick", longClick, _make_long_click)
         return node
 
     def _view_type(self):

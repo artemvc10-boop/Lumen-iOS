@@ -11,6 +11,9 @@ from _lumen_messages import MessageObject, TLMessage, SendMessageParams, Update
 
 _lumen.install_open(_lumen_io.lumen_open)
 
+import _lumen_bytearray
+_lumen.install_builtin("bytearray", _lumen_bytearray.bytearray)
+
 
 # Skulpt's json has dumps/loads only.
 def _json_dump(obj, fp, *args, **kwargs):
@@ -35,7 +38,14 @@ def _next_id():
 
 
 def _error_text(error):
-    return type(error).__name__ + ": " + str(error)
+    text = type(error).__name__ + ": " + str(error)
+    try:
+        where = _lumen.traceback_of(error)
+        if where:
+            text += " (" + where + ")"
+    except Exception:
+        pass
+    return text
 
 
 def _run(plugin_id, what, fn, *args):
@@ -71,16 +81,37 @@ def safe_call(fn, *args):
     _run(plugin_id, "callback", fn, *args)
 
 
+def run_as(plugin_id, what, fn, *args):
+    return _run(plugin_id, what, fn, *args)
+
+
 def defer_runnable(runnable, delay=0):
     run = getattr(runnable, "run", None)
     if callable(run):
         defer(run, delay)
+    elif callable(runnable):
+        defer(runnable, delay)
+
+
+def _refresh_views():
+    import _lumen_views
+    _lumen_views.refresh_open_dialogs()
 
 
 def set_view_text(payload):
     import _lumen_views as vt
     request = json.loads(payload)
     vt.set_view_text(request["vid"], request.get("value"))
+    _refresh_views()
+    return json.dumps({"ok": True})
+
+
+def activity_result(payload):
+    """A picker the plugin opened with startActivityForResult returned."""
+    import _lumen_activity
+    request = json.loads(payload)
+    _lumen_activity.deliver_result(int(request.get("requestCode", 0)), request.get("path"), request.get("mime"))
+    _refresh_views()
     return json.dumps({"ok": True})
 
 
@@ -166,6 +197,8 @@ def load_plugin(payload):
     source = request["source"]
     module_name = "lumen_plugin_" + "".join(c if c.isalnum() else "_" for c in plugin_id)
     _lumen_java.scan_imports(source)
+    import _lumen_preprocess
+    source = _lumen_preprocess.prepare(source)
     _lumen.set_file(request.get("path", ""))
     previous = bridge.set_current_plugin(plugin_id)
     try:
@@ -199,6 +232,8 @@ def unload_plugin(payload):
         return json.dumps({"ok": True})
     _run(plugin_id, "on_plugin_unload", record["instance"].on_plugin_unload)
     _lumen.forget_module(record["module"])
+    import _lumen_activity
+    _lumen_activity.remove_plugin_hooks(plugin_id)
     for callback_id in [k for k, v in _callbacks.items() if v[0] == plugin_id]:
         del _callbacks[callback_id]
         _persistent.discard(callback_id)
@@ -245,14 +280,23 @@ def update_hook(payload):
 
 
 def _message_context(request):
+    import _lumen_activity
     message = request.get("message")
     dialog_id = int(request.get("dialogId", 0))
-    context = {"account": 0, "context": JavaStub("Context"), "fragment": JavaStub("ChatActivity"),
+    _lumen_activity.set_current_dialog(dialog_id)
+    context = {"account": 0, "context": _lumen_activity.current_activity(), "fragment": _lumen_activity.current_fragment(),
                "dialog_id": dialog_id, "groupedMessages": [], "user_id": dialog_id if dialog_id > 0 else 0,
                "chat_id": -dialog_id if dialog_id < 0 else 0}
     if message is not None:
         message["dialogId"] = dialog_id
         context["message"] = MessageObject(message)
+    media_path = request.get("mediaPath")
+    if media_path:
+        # The message's media, already copied somewhere the plugin may read it.
+        context["filepath"] = str(media_path)
+        if message is not None:
+            context["message"]._lumen_media_path = str(media_path)
+            context["message"].messageOwner._lumen_media_path = str(media_path)
     return context
 
 
@@ -265,6 +309,7 @@ def menu_click(payload):
     if data is None or data.on_click is None:
         return json.dumps({"error": "пункт меню не найден"})
     _run(record["id"], "меню «" + str(data.text) + "»", data.on_click, _message_context(request))
+    _refresh_views()
     return json.dumps({"ok": True})
 
 
@@ -340,6 +385,7 @@ def run_callback(payload):
     plugin_id, fn = entry
     args = request.get("args") or []
     _run(plugin_id, "callback", fn, *args)
+    _refresh_views()
     return json.dumps({"ok": True})
 
 

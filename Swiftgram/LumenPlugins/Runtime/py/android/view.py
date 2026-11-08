@@ -53,3 +53,7 @@ class ViewGroup(View):
 
     class MarginLayoutParams(LayoutParams):
         pass
+
+
+import _lumen_java
+_lumen_java.fill_module(__name__)

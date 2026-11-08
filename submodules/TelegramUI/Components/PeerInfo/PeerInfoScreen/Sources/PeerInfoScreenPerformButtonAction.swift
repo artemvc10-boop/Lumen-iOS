@@ -14,6 +14,7 @@ import TelegramNotices
 import AlertComponent
 import WalletContext
 import WalletSendScreen
+import LumenPlugins
 
 extension PeerInfoScreenNode {
     func performButtonAction(key: PeerInfoHeaderButtonKey, buttonNode: PeerInfoHeaderButtonNode?, gesture: ContextGesture?) {
@@ -394,7 +395,23 @@ extension PeerInfoScreenNode {
                 guard let strongSelf = self else {
                     return .single(items)
                 }
-                
+
+                // MARK: Lumen: plugin chat actions (the "⋮" menu of a chat on Android).
+                let lumenChatItems = LumenPluginManager.shared.menuItems.filter { $0.kind == .chat }
+                if !lumenChatItems.isEmpty {
+                    let lumenContext = LumenPluginMessageContext(accountPeerId: strongSelf.context.account.peerId.toInt64(), dialogId: lumenDialogId(peerId: strongSelf.peerId), messageId: 0, text: "", hasMedia: false)
+                    for lumenItem in lumenChatItems {
+                        items.append(.action(ContextMenuActionItem(text: lumenItem.title, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
+                        }, action: { _, f in
+                            f(.dismissWithoutContent)
+                            LumenPluginManager.shared.performMenuItem(lumenItem, context: lumenContext)
+                        })))
+                    }
+                    items.append(.separator)
+                }
+                //
+
                 let allHeaderButtons = Set(peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: strongSelf.isOpenedFromChat, isExpanded: false, videoCallsEnabled: strongSelf.videoCallsEnabled, isSecretChat: strongSelf.peerId.namespace == Namespaces.Peer.SecretChat, isContact: strongSelf.data?.isContact ?? false, threadInfo: data.threadData?.info))
                 let headerButtons = Set(peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: strongSelf.isOpenedFromChat, isExpanded: true, videoCallsEnabled: strongSelf.videoCallsEnabled, isSecretChat: strongSelf.peerId.namespace == Namespaces.Peer.SecretChat, isContact: strongSelf.data?.isContact ?? false, threadInfo: strongSelf.data?.threadData?.info))
                 

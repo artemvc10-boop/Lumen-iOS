@@ -32,15 +32,15 @@ var LumenHost = (function () {
         if (rest.indexOf("/_lumen") >= 0) {
             return null;
         }
-        // Java packages are lower case; a capitalised last part is a class, which the
-        // package's stub module provides as an attribute.
+        // Only packages a plugin actually imports become stubs. Anything else (e.g. "os"
+        // looked up relative to "java" first, as Skulpt does) must miss, so the real
+        // top-level module is used.
         var dotted = (top + rest).replace(/\//g, ".");
-        var last = dotted.split(".").pop();
-        if (rest.length > 0 && /^[A-Z]/.test(last) && !knownPackages[dotted]) {
+        if (!knownPackages[dotted]) {
             return null;
         }
         if (STUB_PACKAGES.indexOf(top) >= 0 || (top === "java" && rest.length > 0)) {
-            return (top + rest).replace(/\//g, ".");
+            return dotted;
         }
         return null;
     }
@@ -77,10 +77,12 @@ var LumenHost = (function () {
         "  mod.register_package = new Sk.builtin.func(function (name) { LumenHost.registerPackage(Sk.ffi.remapToJs(name)); return Sk.builtin.none.none$; });\n" +
         "  mod.set_file = new Sk.builtin.func(function (path) { Sk.builtins.__file__ = path; return Sk.builtin.none.none$; });\n" +
         "  mod.install_open = new Sk.builtin.func(function (fn) { Sk.builtins.open = fn; return Sk.builtin.none.none$; });\n" +
+        "  mod.traceback_of = new Sk.builtin.func(function (e) { var tb = (e && e.traceback) || []; return new Sk.builtin.str(tb.slice(0, 5).map(function (f) { return String(f.filename).replace('src/lib/', '') + ':' + f.lineno; }).join(' <- ')); });\n" +
+        "  mod.install_builtin = new Sk.builtin.func(function (name, value) { Sk.builtins[Sk.ffi.remapToJs(name)] = value; return Sk.builtin.none.none$; });\n" +
         "  return mod;\n" +
         "};\n";
 
-    var B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    var B64 ="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     var B64_INDEX = (function () {
         var table = {};
         for (var i = 0; i < B64.length; i++) {

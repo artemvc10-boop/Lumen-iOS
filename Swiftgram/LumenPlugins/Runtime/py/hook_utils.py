@@ -2,6 +2,10 @@
 
 
 def find_class(class_name, *args, **kwargs):
+    # LaunchActivity is found so plugins can hook onActivityResult (photo/file pickers).
+    if str(class_name) == "org.telegram.ui.LaunchActivity":
+        import _lumen_activity
+        return _lumen_activity._LaunchActivityClass()
     return None
 
 

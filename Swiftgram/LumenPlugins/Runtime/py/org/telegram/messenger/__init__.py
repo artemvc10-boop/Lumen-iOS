@@ -7,5 +7,5 @@ from _lumen_tg import (
 from _lumen_java import JavaStub
 
 
-def __getattr__(name):
-    return JavaStub("messenger." + name)
+import _lumen_java
+_lumen_java.fill_module(__name__)

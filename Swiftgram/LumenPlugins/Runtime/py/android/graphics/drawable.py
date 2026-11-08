@@ -61,3 +61,7 @@ class ColorDrawable(object):
 class Drawable(object):
     def __init__(self, *args, **kwargs):
         pass
+
+
+import _lumen_java
+_lumen_java.fill_module(__name__)

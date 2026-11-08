@@ -1593,15 +1593,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if !message.lumenEditHistory.isEmpty {
             actions.append(sgMakeContextMenuAction(.lumenEditHistory(controllerInteraction: controllerInteraction), chatPresentationInterfaceState: chatPresentationInterfaceState, message: message))
         }
-        let lumenMessageMenuItems = LumenPluginManager.shared.menuItems.filter { $0.kind == .message }
+        let lumenMessageMenuItems = LumenPluginManager.shared.menuItems.filter { $0.kind == .message || $0.kind == .chat }
         if !lumenMessageMenuItems.isEmpty {
             let hasMedia = message.media.contains { !($0 is TelegramMediaWebpage) && !($0 is TelegramMediaAction) }
-            let pluginContext = LumenPluginMessageContext(accountPeerId: context.account.peerId.toInt64(), dialogId: lumenDialogId(peerId: message.id.peerId), messageId: message.id.id, text: message.text, hasMedia: hasMedia)
+            let accountPeerId = context.account.peerId.toInt64()
+            let dialogId = lumenDialogId(peerId: message.id.peerId)
+            let lumenAccountContext = context
+            let lumenMessage = message
+            // Shown in the main menu, like plugin items on Android.
             for pluginItem in lumenMessageMenuItems {
-                sgActions.append(.action(ContextMenuActionItem(text: pluginItem.title, icon: { theme in
+                actions.append(.action(ContextMenuActionItem(text: pluginItem.title, textLayout: pluginItem.subtitle.map { .secondLineWithValue($0) } ?? .singleLine, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     f(.default)
+                    let mediaPath = lumenCopyMessageMedia(context: lumenAccountContext, message: lumenMessage)
+                    let pluginContext = LumenPluginMessageContext(accountPeerId: accountPeerId, dialogId: dialogId, messageId: lumenMessage.id.id, text: lumenMessage.text, hasMedia: hasMedia, mediaPath: mediaPath)
                     LumenPluginManager.shared.performMenuItem(pluginItem, context: pluginContext)
                 })))
             }
@@ -4193,4 +4199,52 @@ private final class ChatRateTranscriptionContextItemNode: ASDisplayNode, Context
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
         return self
     }
+}
+
+// MARK: Lumen: a message's photo/video/file, copied (with a real extension) into the app's
+// temporary folder, so plugins can read it the way they read media files on Android.
+// nil when it is not downloaded yet; plugins then ask to open the media first.
+private func lumenCopyMessageMedia(context: AccountContext, message: EngineRawMessage) -> String? {
+    let mediaBox = context.account.postbox.mediaBox
+    var sourcePath: String?
+    var pathExtension = "jpg"
+    for media in message.media {
+        if let image = media as? TelegramMediaImage, let representation = largestImageRepresentation(image.representations) {
+            sourcePath = mediaBox.completedResourcePath(representation.resource)
+            pathExtension = "jpg"
+        } else if let file = media as? TelegramMediaFile {
+            sourcePath = mediaBox.completedResourcePath(file.resource)
+            if let fileName = file.fileName, !(fileName as NSString).pathExtension.isEmpty {
+                pathExtension = (fileName as NSString).pathExtension.lowercased()
+            } else if file.mimeType.hasPrefix("video/") || file.isAnimated {
+                pathExtension = "mp4"
+            } else if file.mimeType == "image/png" {
+                pathExtension = "png"
+            } else if file.mimeType == "image/webp" || file.isSticker {
+                pathExtension = "webp"
+            } else if file.mimeType == "image/gif" {
+                pathExtension = "gif"
+            } else if file.mimeType.hasPrefix("image/") {
+                pathExtension = "jpg"
+            } else {
+                pathExtension = "bin"
+            }
+        }
+        if sourcePath != nil {
+            break
+        }
+    }
+    guard let sourcePath else {
+        return nil
+    }
+    let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("lumen-media", isDirectory: true)
+    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let target = folder.appendingPathComponent("\(message.id.peerId.toInt64())_\(message.id.id).\(pathExtension)")
+    try? FileManager.default.removeItem(at: target)
+    do {
+        try FileManager.default.copyItem(at: URL(fileURLWithPath: sourcePath), to: target)
+    } catch {
+        return nil
+    }
+    return target.path
 }

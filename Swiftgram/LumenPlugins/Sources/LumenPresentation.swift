@@ -26,8 +26,23 @@ enum LumenPresentation {
 
     static func present(_ controller: UIViewController) {
         DispatchQueue.main.async {
-            topViewController()?.present(controller, animated: true)
+            self.present(controller, attempt: 0)
         }
+    }
+
+    /// Presenting while another sheet is still animating away fails silently, so wait it out.
+    private static func present(_ controller: UIViewController, attempt: Int) {
+        guard let top = topViewController() else {
+            return
+        }
+        let busy = top.isBeingDismissed || top.isBeingPresented || (top.presentedViewController?.isBeingDismissed ?? false)
+        if busy && attempt < 8 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.present(controller, attempt: attempt + 1)
+            }
+            return
+        }
+        top.present(controller, animated: true)
     }
 
     static func share(fileURL: URL) {

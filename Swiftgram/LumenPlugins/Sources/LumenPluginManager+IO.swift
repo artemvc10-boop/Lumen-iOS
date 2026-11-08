@@ -18,10 +18,12 @@ extension LumenPluginManager {
             }
         }
         if path.hasPrefix("/") {
-            // An absolute path already inside our container is fine; anything else is not.
-            let url = URL(fileURLWithPath: path).standardizedFileURL
-            let container = (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.deletingLastPathComponent().path) ?? ""
-            return url.path.hasPrefix(container) ? url : nil
+            // An absolute path inside the app's own sandbox (Documents, Library, tmp) is fine;
+            // anything else is not.
+            let url = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath()
+            let home = URL(fileURLWithPath: NSHomeDirectory()).standardizedFileURL.resolvingSymlinksInPath().path
+            let temp = URL(fileURLWithPath: NSTemporaryDirectory()).standardizedFileURL.resolvingSymlinksInPath().path
+            return (url.path.hasPrefix(home) || url.path.hasPrefix(temp)) ? url : nil
         }
         base = self.dataDirectory(id: pluginId)
         let url = base.appendingPathComponent(path).standardizedFileURL

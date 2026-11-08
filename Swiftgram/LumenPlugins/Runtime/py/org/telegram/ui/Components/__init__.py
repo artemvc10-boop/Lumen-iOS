@@ -58,5 +58,5 @@ class LayoutHelper(object):
         return View.LayoutParams(width, height)
 
 
-def __getattr__(name):
-    return JavaStub("Components." + name)
+import _lumen_java
+_lumen_java.fill_module(__name__)

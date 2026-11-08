@@ -86,7 +86,8 @@ def get_queue_by_name(name):
 
 
 def get_last_fragment():
-    return JavaStub("BaseFragment")
+    import _lumen_activity
+    return _lumen_activity.current_fragment()
 
 
 def get_selected_account():

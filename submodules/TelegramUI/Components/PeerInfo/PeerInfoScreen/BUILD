@@ -5,6 +5,7 @@ sgdeps = [
     "//Swiftgram/SGSettingsUI:SGSettingsUI",
     "//Swiftgram/SGStrings:SGStrings",
     "//Swiftgram/SGSimpleSettings:SGSimpleSettings",
+    "//Swiftgram/LumenPlugins:LumenPlugins", # MARK: Lumen
 
     "//Swiftgram/SGRegDate:SGRegDate",
     "//Swiftgram/SGRegDateScheme:SGRegDateScheme",

@@ -71,7 +71,10 @@ extension LumenPluginManager {
             LumenHooks.sendText?(self.activeAccountPeerId, self.int64(arg["dialogId"]), arg["text"] as? String ?? "")
             return nil
         case "sendFile":
-            LumenHooks.sendFile?(self.activeAccountPeerId, self.int64(arg["dialogId"]), arg["path"] as? String ?? "", arg["kind"] as? String ?? "document", arg["caption"] as? String ?? "")
+            // Plugin paths (/storage/emulated/0/...) map into the app before TelegramCore reads them.
+            let raw = arg["path"] as? String ?? ""
+            let path = self.mapPath(raw, pluginId: pluginId)?.path ?? raw
+            LumenHooks.sendFile?(self.activeAccountPeerId, self.int64(arg["dialogId"]), path, arg["kind"] as? String ?? "document", arg["caption"] as? String ?? "")
             return nil
         case "clipboard":
             let text = arg["text"] as? String ?? ""
@@ -95,6 +98,26 @@ extension LumenPluginManager {
         case "dismissView":
             self.dismissAndroidView(arg["id"])
             return nil
+        case "updateView":
+            self.updateAndroidView(arg)
+            return nil
+        case "pickMedia":
+            self.presentPicker(pluginId: pluginId, requestCode: arg["requestCode"] as? Int ?? 0, mime: arg["mime"] as? String ?? "*/*")
+            return nil
+        case "openUrl":
+            if let text = arg["url"] as? String, let url = URL(string: text) {
+                DispatchQueue.main.async { UIApplication.shared.open(url) }
+            }
+            return nil
+        case "share":
+            let paths = (arg["paths"] as? [String] ?? []).compactMap { self.mapPath($0, pluginId: pluginId) }
+            self.share(urls: paths, text: arg["text"] as? String)
+            return nil
+        case "locale":
+            let language = Locale.preferredLanguages.first.map { String($0.prefix(2)) } ?? "en"
+            return ["language": language, "country": Locale.current.regionCode ?? ""]
+        case "screen":
+            return LumenScreenInfo.current()
         default:
             return nil
         }

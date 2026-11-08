@@ -11,3 +11,7 @@ FrameLayout.LayoutParams = View.LayoutParams
 RelativeLayout.LayoutParams = View.LayoutParams
 ScrollView.LayoutParams = View.LayoutParams
 FrameLayout.LayoutParams = View.LayoutParams
+
+
+import _lumen_java
+_lumen_java.fill_module(__name__)

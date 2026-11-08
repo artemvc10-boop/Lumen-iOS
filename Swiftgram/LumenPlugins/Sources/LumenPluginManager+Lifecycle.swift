@@ -174,6 +174,7 @@ extension LumenPluginManager {
     }
 
     public func performMenuItem(_ item: LumenPluginMenuItem, context: LumenPluginMessageContext) {
+        LumenScreenInfo.refresh()
         self.queue.async {
             self.activeAccountPeerId = context.accountPeerId
             if let native = self.nativeHandlers[item.pluginId] {
@@ -182,7 +183,7 @@ extension LumenPluginManager {
                 }
                 return
             }
-            self.hostCall("menu_click", [
+            var payload: [String: Any] = [
                 "plugin": item.pluginId,
                 "itemId": item.itemId,
                 "dialogId": context.dialogId,
@@ -194,7 +195,11 @@ extension LumenPluginManager {
                     "hasMedia": context.hasMedia,
                     "date": 0,
                 ],
-            ])
+            ]
+            if let mediaPath = context.mediaPath {
+                payload["mediaPath"] = mediaPath
+            }
+            self.hostCall("menu_click", payload)
             self.runDeferred()
         }
     }

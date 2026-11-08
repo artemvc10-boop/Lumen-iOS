@@ -94,6 +94,11 @@ def hook_filters(*args, **kwargs):
     return wrap
 
 
+class _Unhook(object):
+    def unhook(self):
+        pass
+
+
 class PluginError(Exception):
     pass
 
@@ -209,10 +214,19 @@ class BasePlugin(object):
 
     # Java method hooking has no iOS equivalent; these succeed and do nothing.
     def hook_method(self, method, hook, priority=0, *args, **kwargs):
+        import _lumen_activity
+        # onActivityResult is how pickers report back; Lumen delivers those itself.
+        if _lumen_activity.is_activity_result_method(method):
+            _lumen_activity.add_result_hook(getattr(self, "id", None), hook)
+            return _Unhook()
         self._lumen_note_java_hook()
         return None
 
     def hook_all_methods(self, cls, name, hook, *args, **kwargs):
+        if name == "onActivityResult" and getattr(cls, "getName", None) is not None:
+            import _lumen_activity
+            _lumen_activity.add_result_hook(getattr(self, "id", None), hook)
+            return [_Unhook()]
         self._lumen_note_java_hook()
         return []
 

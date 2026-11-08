@@ -50,13 +50,16 @@ public struct LumenPluginMessageContext {
     public let messageId: Int32
     public let text: String
     public let hasMedia: Bool
+    /// The message's photo/video/file, copied where plugins may read it.
+    public let mediaPath: String?
 
-    public init(accountPeerId: Int64, dialogId: Int64, messageId: Int32, text: String, hasMedia: Bool) {
+    public init(accountPeerId: Int64, dialogId: Int64, messageId: Int32, text: String, hasMedia: Bool, mediaPath: String? = nil) {
         self.accountPeerId = accountPeerId
         self.dialogId = dialogId
         self.messageId = messageId
         self.text = text
         self.hasMedia = hasMedia
+        self.mediaPath = mediaPath
     }
 }
 
@@ -120,6 +123,8 @@ public final class LumenPluginManager: ObservableObject {
     var presentedAndroidViews: [Int: UIViewController] = [:]
     /// Plugin whose view tree is being built/presented, for resolving its image paths.
     var activeViewPluginId: String = ""
+    /// Keeps the photo/file picker delegate alive while the picker is on screen.
+    var activePickerDelegate: AnyObject?
 
     public let directory: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())
@@ -149,6 +154,9 @@ public final class LumenPluginManager: ObservableObject {
     // MARK: Startup
 
     public func start() {
+        DispatchQueue.main.async {
+            LumenScreenInfo.refresh()
+        }
         self.queue.async {
             if self.context != nil {
                 return

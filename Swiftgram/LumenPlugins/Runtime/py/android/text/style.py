@@ -28,3 +28,7 @@ class ImageSpan(object):
 
 class UnderlineSpan(object):
     pass
+
+
+import _lumen_java
+_lumen_java.fill_module(__name__)
