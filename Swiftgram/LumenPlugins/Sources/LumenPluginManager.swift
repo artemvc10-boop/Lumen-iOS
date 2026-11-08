@@ -127,6 +127,9 @@ public final class LumenPluginManager: ObservableObject {
     var presentedAndroidViews: [Int: UIViewController] = [:]
     /// Plugin whose view tree is being built/presented, for resolving its image paths.
     var activeViewPluginId: String = ""
+    /// Native declarative screens plugins presented (see lumen/ui.py).
+    var presentedScreens: [String: AnyObject] = [:]
+    var screenControllers: [String: UIViewController] = [:]
     /// Keeps the photo/file picker delegate alive while the picker is on screen.
     var activePickerDelegate: AnyObject?
 

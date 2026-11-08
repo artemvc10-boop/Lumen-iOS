@@ -127,6 +127,15 @@ extension LumenPluginManager {
             return self.setAppSettingValue(key, value)
         case "appSettingKeys":
             return LumenSettingsBridge.allKeys()
+        case "presentScreen":
+            self.presentScreen(pluginId: pluginId, spec: arg["spec"] as? [String: Any] ?? [:])
+            return nil
+        case "updateScreen":
+            self.updateScreen(id: arg["id"] as? String ?? "", spec: arg["spec"] as? [String: Any] ?? [:])
+            return nil
+        case "dismissScreen":
+            self.dismissScreen(id: arg["id"] as? String ?? "")
+            return nil
         default:
             return nil
         }

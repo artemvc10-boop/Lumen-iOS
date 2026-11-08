@@ -88,3 +88,45 @@ class MyPlugin(BasePlugin):
 ## Отличия от exteraGram
 
 Плагины exteraGram перехватывают методы Java-клиента Android (Xposed). На iPhone этого нет, поэтому часть таких плагинов работает лишь частично. Хуки верхнего уровня переносятся один в один: `on_send_message_hook` → так же, `on_update_hook` → так же, пункты меню → `add_menu_item`, `create_settings` → так же.
+
+## Нативные экраны (только Lumen)
+
+Плагин может открыть настоящий iOS-экран, не рисуя Android-виджеты:
+
+```python
+from lumen import ui
+
+class P(BasePlugin):
+    def open(self, context):
+        self.count = 0
+        ui.present(self.build)                 # build вызывается заново на каждом обновлении
+
+    def build(self):
+        return ui.screen("Мой экран", [
+            ui.section(header="Раздел", rows=[
+                ui.text("Нажатий: %d" % self.count, subtitle="нажми", on_click=self.bump),
+                ui.switch("Флажок", value=False, on_change=lambda v: ...),
+                ui.input(placeholder="Поиск", on_change=lambda v: ...),
+                ui.button("Готово", style="destructive", on_click=lambda: ui.toast("ок")),
+            ]),
+            ui.section(rows=[ui.grid(items, columns=3, on_click=self.pick)]),
+        ], search=True, bottom_button=ui.bottom_button("Отправить", on_click=self.send))
+
+    def bump(self):
+        self.count += 1          # после обработчика экран перерисуется сам
+```
+
+Строки: `ui.text`, `ui.switch`, `ui.input`, `ui.button`, `ui.selector`, `ui.chips`, `ui.image`,
+`ui.grid` (сетка картинок с выбором и значками). Ещё: `ui.toast(text, "success"|"error")`,
+`ui.alert(title, message, buttons=[("OK", handler)])`. Поиск: `screen(..., search=True)`,
+текст приходит в `on_search` у `ui.present(build, on_search=...)`.
+
+## Настройки клиента (только Lumen)
+
+```python
+import lumen
+lumen.settings.set("lumen.ghost.enabled", True)   # настройки Lumen — сразу
+lumen.settings.set("sg.hideStories", True)         # настройки Swiftgram — при перезапуске
+lumen.settings.toggle("app.forceClearGlass")       # родное стекло iOS
+for key in lumen.settings.keys(): ...
+```

@@ -106,6 +106,16 @@ def set_view_text(payload):
     return json.dumps({"ok": True})
 
 
+def screen_event(payload):
+    """A native plugin screen reported a tap/edit/search/select."""
+    import lumen.ui
+    request = json.loads(payload)
+    plugin_id = request.get("plugin")
+    _run(plugin_id, "screen event", lumen.ui.deliver_event, request)
+    _refresh_views()
+    return json.dumps({"ok": True})
+
+
 def activity_result(payload):
     """A picker the plugin opened with startActivityForResult returned."""
     import _lumen_activity
