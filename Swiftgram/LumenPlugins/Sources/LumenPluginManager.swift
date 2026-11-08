@@ -116,6 +116,11 @@ public final class LumenPluginManager: ObservableObject {
     var presentedAlerts: [Int: UIAlertController] = [:]
     var alertDismissCallbacks: [Int: Int] = [:]
 
+    /// Android view trees presented by plugins (AlertDialog.setView, BottomSheet).
+    var presentedAndroidViews: [Int: UIViewController] = [:]
+    /// Plugin whose view tree is being built/presented, for resolving its image paths.
+    var activeViewPluginId: String = ""
+
     public let directory: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())
         return base.appendingPathComponent("LumenPlugins", isDirectory: true)

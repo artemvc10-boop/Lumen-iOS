@@ -56,6 +56,34 @@ def register_callback(fn):
     return callback_id
 
 
+# View callbacks fire many times (taps on a live sheet), so they are not one-shot.
+_persistent = set()
+
+
+def register_view_callback(fn):
+    callback_id = register_callback(fn)
+    _persistent.add(callback_id)
+    return callback_id
+
+
+def safe_call(fn, *args):
+    plugin_id = bridge.current_plugin()
+    _run(plugin_id, "callback", fn, *args)
+
+
+def defer_runnable(runnable, delay=0):
+    run = getattr(runnable, "run", None)
+    if callable(run):
+        defer(run, delay)
+
+
+def set_view_text(payload):
+    import _lumen_views as vt
+    request = json.loads(payload)
+    vt.set_view_text(request["vid"], request.get("value"))
+    return json.dumps({"ok": True})
+
+
 def defer(fn, delay=0):
     callback_id = register_callback(fn)
     try:
@@ -173,6 +201,7 @@ def unload_plugin(payload):
     _lumen.forget_module(record["module"])
     for callback_id in [k for k, v in _callbacks.items() if v[0] == plugin_id]:
         del _callbacks[callback_id]
+        _persistent.discard(callback_id)
     return json.dumps({"ok": True})
 
 
@@ -302,11 +331,12 @@ def settings_event(payload):
 
 def run_callback(payload):
     request = json.loads(payload)
-    entry = _callbacks.get(request["id"])
+    callback_id = request["id"]
+    entry = _callbacks.get(callback_id)
     if entry is None:
         return json.dumps({"ok": False})
-    if not request.get("keep", False):
-        del _callbacks[request["id"]]
+    if callback_id not in _persistent and not request.get("keep", False):
+        del _callbacks[callback_id]
     plugin_id, fn = entry
     args = request.get("args") or []
     _run(plugin_id, "callback", fn, *args)

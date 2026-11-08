@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import ImageIO
 import CryptoKit
 import JavaScriptCore
 import SGSimpleSettings
@@ -84,9 +85,28 @@ extension LumenPluginManager {
             return UUID().uuidString.lowercased()
         case "localtime", "mktime", "strftime":
             return self.handleTime(op: op, arg)
+        case "themeColor":
+            return LumenAndroidTheme.color(forKey: arg["key"] as? String ?? "")
+        case "imageSize":
+            return self.imageSize(arg["path"] as? String ?? "", pluginId: pluginId)
+        case "presentView":
+            self.presentAndroidView(arg)
+            return nil
+        case "dismissView":
+            self.dismissAndroidView(arg["id"])
+            return nil
         default:
             return nil
         }
+    }
+
+    private func imageSize(_ raw: String, pluginId: String) -> [String: Any] {
+        guard let url = self.mapPath(raw, pluginId: pluginId), let source = CGImageSourceCreateWithURL(url as CFURL, nil), let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else {
+            return ["width": 0, "height": 0]
+        }
+        let width = (props[kCGImagePropertyPixelWidth] as? Int) ?? 0
+        let height = (props[kCGImagePropertyPixelHeight] as? Int) ?? 0
+        return ["width": width, "height": height]
     }
 
     private func int64(_ value: Any?) -> Int64 {
