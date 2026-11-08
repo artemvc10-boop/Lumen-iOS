@@ -34,8 +34,10 @@ BAZELRC_EXTRA = '''
 build --action_env=PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 build --//Telegram:disableProvisioningProfiles=true
 build --features=disable_legacy_signing
-# Survive transient GitHub 504s while Bazel fetches its own rule archives.
+# Survive transient GitHub 504s while Bazel fetches its own rule archives, and keep the
+# fetched archives so a later GitHub outage can reuse them instead of re-downloading.
 common --experimental_repository_downloader_retries=5
+common --repository_cache=/Users/runner/telegram-repo-cache
 build --jobs={jobs}
 build --worker_max_instances=SwiftCompile=1
 build --experimental_ui_max_stdouterr_bytes=-1
