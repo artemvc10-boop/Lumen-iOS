@@ -172,12 +172,17 @@ final class AccessoryItemIconButton: HighlightTrackingButton, GlassBackgroundVie
                 return (PresentationResourcesChat.chatInputTextFieldScheduleImage(theme), nil, strings.VoiceOver_ScheduledMessages, 1.0, UIEdgeInsets())
             case .gift:
                 return (PresentationResourcesChat.chatInputTextFieldGiftImage(theme), nil, strings.VoiceOver_GiftPremium, 1.0, UIEdgeInsets())
+            case .lumenPlugins:
+                // MARK: Lumen: same white template rendering as the other accessory icons.
+                let symbol = UIImage(systemName: "photo.on.rectangle.angled", withConfiguration: UIImage.SymbolConfiguration(pointSize: 18.0, weight: .regular))
+                let image = symbol.flatMap { generateTintedImage(image: $0, color: .white)?.withRenderingMode(.alwaysTemplate) }
+                return (image, nil, "Plugins", 1.0, UIEdgeInsets())
         }
     }
     
     private static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
-        case .input, .botInput, .silentPost, .commands, .scheduledMessages, .gift, .suggestPost:
+        case .input, .botInput, .silentPost, .commands, .scheduledMessages, .gift, .suggestPost, .lumenPlugins:
             return 32.0
         case let .messageAutoremoveTimeout(timeout):
             var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)

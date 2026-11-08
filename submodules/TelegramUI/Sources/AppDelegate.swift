@@ -1236,7 +1236,38 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 let contextController = makeContextController(presentationData: presentationData, source: .reference(NavigationBarOverflowMenuReferenceSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(menuItems))), gesture: nil)
                 mainWindow.presentInGlobalOverlay(contextController)
             }
-            
+
+            // MARK: Lumen: the few app settings plugins may read and change (native glass).
+            LumenPluginManager.appSettingReader = { [weak sharedContext] key in
+                guard let settings = sharedContext?.immediateExperimentalUISettings else {
+                    return nil
+                }
+                switch key {
+                case "forceClearGlass":
+                    return settings.forceClearGlass
+                case "fakeGlass":
+                    return settings.fakeGlass
+                default:
+                    return nil
+                }
+            }
+            LumenPluginManager.appSettingWriter = { [weak sharedContext] key, value in
+                guard let sharedContext, let flag = value as? Bool, key == "forceClearGlass" || key == "fakeGlass" else {
+                    return false
+                }
+                let _ = updateExperimentalUISettingsInteractively(accountManager: sharedContext.accountManager, { settings in
+                    var settings = settings
+                    if key == "forceClearGlass" {
+                        settings.forceClearGlass = flag
+                    } else {
+                        settings.fakeGlass = flag
+                    }
+                    return settings
+                }).start()
+                return true
+            }
+            //
+
             presentationDataPromise.set(sharedContext.presentationData)
             #if targetEnvironment(simulator)
             if CommandLine.arguments.contains("--context-menu-morph-gallery") {

@@ -1,5 +1,6 @@
 import TelegramUIPreferences // MARK: Swiftgram
 import SGSimpleSettings // MARK: Swiftgram
+import LumenPlugins // MARK: Lumen
 import SwiftUI // MARK: Swiftgram
 import SGInputToolbar // MARK: Swiftgram
 
@@ -6057,6 +6058,11 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     self.interfaceInteraction?.openScheduledMessages()
                 case .gift:
                     self.interfaceInteraction?.openPremiumGift()
+                case .lumenPlugins:
+                    // MARK: Lumen
+                    if let context = self.context, let peerId = self.presentationInterfaceState?.chatLocation.peerId {
+                        LumenPluginManager.shared.presentChatActions(accountPeerId: context.account.peerId.toInt64(), dialogId: lumenDialogId(peerId: peerId))
+                    }
                 case .suggestPost:
                     self.interfaceInteraction?.openSuggestPost(nil, .default)
                 }

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import SGSimpleSettings
 
 // MARK: Lumen: loading, installing and the menu/settings read back from the runtime.
@@ -208,6 +209,32 @@ extension LumenPluginManager {
             self.hostCall("menu_click", payload)
             self.runDeferred()
         }
+    }
+
+    /// The plugin button in a chat's input field: runs the only chat action right away, or
+    /// lets the person pick one when several plugins offer them.
+    public func presentChatActions(accountPeerId: Int64, dialogId: Int64) {
+        let items = self.menuItems.filter { $0.kind == .chat }
+        let context = LumenPluginMessageContext(accountPeerId: accountPeerId, dialogId: dialogId, messageId: 0, text: "", hasMedia: false)
+        if items.count == 1, let item = items.first {
+            self.performMenuItem(item, context: context)
+            return
+        }
+        guard !items.isEmpty else {
+            return
+        }
+        let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        for item in items {
+            sheet.addAction(UIAlertAction(title: item.title, style: .default) { [weak self] _ in
+                self?.performMenuItem(item, context: context)
+            })
+        }
+        sheet.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+        if let popover = sheet.popoverPresentationController, let top = LumenPresentation.topViewController() {
+            popover.sourceView = top.view
+            popover.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.maxY - 80.0, width: 1.0, height: 1.0)
+        }
+        LumenPresentation.present(sheet)
     }
 
     // MARK: Settings page

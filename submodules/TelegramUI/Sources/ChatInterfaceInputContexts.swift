@@ -1,4 +1,5 @@
 import SGSimpleSettings
+import LumenPlugins // MARK: Lumen
 import Foundation
 import UIKit
 import TelegramCore
@@ -210,6 +211,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                    
                 if isTextEmpty && chatPresentationInterfaceState.hasScheduledMessages && !hasForward {
                     accessoryItems.append(.scheduledMessages)
+                }
+                // MARK: Lumen: one tap to plugin chat actions (the meme library and others).
+                if isTextEmpty && !hasForward && LumenPluginManager.shared.menuItems.contains(where: { $0.kind == .chat }) {
+                    accessoryItems.append(.lumenPlugins)
                 }
                     
                 var stickersEnabled = true

@@ -12,6 +12,7 @@ public enum ChatTextInputAccessoryItem: Equatable {
         case scheduledMessages
         case gift
         case suggestPost
+        case lumenPlugins // MARK: Lumen
     }
     
     public enum InputMode: Hashable {
@@ -28,6 +29,8 @@ public enum ChatTextInputAccessoryItem: Equatable {
     case messageAutoremoveTimeout(Int32?)
     case scheduledMessages
     case gift
+    /// MARK: Lumen: opens the chat actions of plugins (e.g. the meme library).
+    case lumenPlugins
     case suggestPost
     
     public var key: Key {
@@ -48,6 +51,8 @@ public enum ChatTextInputAccessoryItem: Equatable {
             return .gift
         case .suggestPost:
             return .suggestPost
+        case .lumenPlugins:
+            return .lumenPlugins
         }
     }
 }

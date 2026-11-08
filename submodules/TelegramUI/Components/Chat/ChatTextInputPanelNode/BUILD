@@ -20,6 +20,7 @@ swift_library(
     ],
     deps = [
         "//Swiftgram/SGSimpleSettings:SGSimpleSettings",
+        "//Swiftgram/LumenPlugins:LumenPlugins", # MARK: Lumen
         "//Swiftgram/SGInputToolbar:SGInputToolbar",
         "//submodules/Display",
         "//submodules/LottieSettings:LottieSettings",

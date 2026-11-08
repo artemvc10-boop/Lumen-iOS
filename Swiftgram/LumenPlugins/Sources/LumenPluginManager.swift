@@ -85,6 +85,10 @@ public struct LumenPluginSettingItem: Identifiable {
 public final class LumenPluginManager: ObservableObject {
     public static let shared = LumenPluginManager()
 
+    /// App settings plugins may read/change (set by the app; only native-glass flags today).
+    public static var appSettingReader: ((String) -> Any?)?
+    public static var appSettingWriter: ((String, Any) -> Bool)?
+
     /// Plugin ids Lumen implements natively (via LumenNativeRegistry); their Python is not run.
     public static var nativePluginIds: Set<String> {
         return Set(LumenNativeRegistry.factories.keys)
