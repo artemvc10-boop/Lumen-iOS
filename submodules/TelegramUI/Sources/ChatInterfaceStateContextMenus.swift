@@ -4205,15 +4205,15 @@ private final class ChatRateTranscriptionContextItemNode: ASDisplayNode, Context
 // temporary folder, so plugins can read it the way they read media files on Android.
 // nil when it is not downloaded yet; plugins then ask to open the media first.
 private func lumenCopyMessageMedia(context: AccountContext, message: EngineRawMessage) -> String? {
-    let mediaBox = context.account.postbox.mediaBox
+    let resources = context.engine.resources
     var sourcePath: String?
     var pathExtension = "jpg"
     for media in message.media {
         if let image = media as? TelegramMediaImage, let representation = largestImageRepresentation(image.representations) {
-            sourcePath = mediaBox.completedResourcePath(representation.resource)
+            sourcePath = resources.completedResourcePath(id: EngineMediaResource.Id(representation.resource.id))
             pathExtension = "jpg"
         } else if let file = media as? TelegramMediaFile {
-            sourcePath = mediaBox.completedResourcePath(file.resource)
+            sourcePath = resources.completedResourcePath(id: EngineMediaResource.Id(file.resource.id))
             if let fileName = file.fileName, !(fileName as NSString).pathExtension.isEmpty {
                 pathExtension = (fileName as NSString).pathExtension.lowercased()
             } else if file.mimeType.hasPrefix("video/") || file.isAnimated {
