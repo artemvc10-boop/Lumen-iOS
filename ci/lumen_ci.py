@@ -207,8 +207,27 @@ def build(source, output, env):
         sys.path.insert(0, str(source / 'build-system/Make'))
         from BazelLocation import locate_bazel, calculate_sha256
         os.chdir(source)
-        bazel = Path(locate_bazel(str(source), None, None))
         expected_version, expected_hash = versions['bazel'].split(':', 1)
+        # Fetch the Bazel binary ourselves, with hard retries: GitHub's release CDN returns
+        # transient 504s, and locate_bazel's own curl writes the error body instead of failing.
+        bazel_name = 'bazel-{}-darwin-arm64'.format(expected_version)
+        bazel_target = build_input / bazel_name
+        import time as _time
+        if not bazel_target.is_file() or calculate_sha256(str(bazel_target)) != expected_hash:
+            url = 'https://github.com/bazelbuild/bazel/releases/download/{}/{}'.format(expected_version, bazel_name)
+            for attempt in range(1, 7):
+                print('+ downloading %s (attempt %d)' % (bazel_name, attempt), flush=True)
+                subprocess.run(['curl', '-fL', '--retry', '6', '--retry-all-errors', '--retry-delay', '15',
+                                '--connect-timeout', '30', '-o', str(bazel_target), url], check=False)
+                if bazel_target.is_file() and calculate_sha256(str(bazel_target)) == expected_hash:
+                    bazel_target.chmod(0o755)
+                    break
+                print('Bazel download attempt %d failed, retrying' % attempt, flush=True)
+                bazel_target.unlink(missing_ok=True)
+                _time.sleep(20)
+            else:
+                raise RuntimeError('Could not download Bazel after retries (GitHub 504?)')
+        bazel = Path(locate_bazel(str(source), None, None))
         if calculate_sha256(str(bazel)) != expected_hash:
             raise ValueError('Downloaded Bazel does not match versions.json')
         manifest['bazel'] = run([bazel, '--version'], capture=True).strip()
