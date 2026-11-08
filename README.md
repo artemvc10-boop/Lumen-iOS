@@ -1,129 +1,70 @@
-# Swiftgram
+# ✨ Lumen
 
-Supercharged Telegram fork for iOS
+Неофициальный клиент Telegram для iPhone с функциями из Android-модов exteraGram и AyuGram: режим призрака, сохранение удалённых сообщений, одноразовые фото как обычные, плагины `.plugin` и много настроек.
 
-[<img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="50">](https://apps.apple.com/app/apple-store/id6471879502?pt=126511626&ct=gh&mt=8)
+> Lumen не связан с Telegram и не является официальным приложением.
 
-- Download: [App Store](https://apps.apple.com/app/apple-store/id6471879502?pt=126511626&ct=gh&mt=8)
-- Telegram channel: https://t.me/swiftgram
-- Telegram chat: https://t.me/swiftgramchat
-- TestFlight beta, local chats, translations and other [@SwiftgramLinks](https://t.me/s/SwiftgramLinks)
+## Возможности
 
-Swiftgram's compilation steps are the same as for the official app. Below you'll find a complete compilation guide based on the official app.
+### 👻 Призрак
+- Не отправлять отметки о прочтении
+- Не отмечать просмотр историй
+- Скрывать «в сети» и «печатает…»
+- Отмечать чат прочитанным, когда ты в нём отвечаешь, чтобы призрак не спалили
+- Кнопка 👻 в шапке списка чатов: включение в одно касание
 
-# Telegram iOS Source Code Compilation Guide
+### 🗑 Сохранение и контент
+- Удалённые собеседником сообщения остаются в чате, полупрозрачные и со значком 🗑
+- История правок: долгое нажатие на сообщение → «История правок»
+- Одноразовые фото и видео не исчезают (значок 🔥)
+- Копирование, пересылка и сохранение в каналах, где это запрещено
+- Скриншоты в секретных и защищённых чатах без уведомлений
+- Без рекламы в каналах
 
-We welcome all developers to use our API and source code to create applications on our platform.
-There are several things we require from **all developers** for the moment.
+### 🧩 Плагины
+- Формат `.plugin` на Python, как в exteraGram
+- Установка: нажми на файл `.plugin` в чате → «Установить плагин»
+- Перехват отправки, ответы на входящие, пункты в меню сообщения, собственные настройки
+- Подробности и API: [docs/PLUGINS.md](docs/PLUGINS.md)
 
-# Creating your Telegram Application
+### 🎨 Внешний вид и прочее
+- Настройки разбиты по разделам: Призрак, Сохранение, Плагины, Внешний вид, Чаты, Медиа, Профили, Другое
+- Значки 🗑/🔥, пометку «изменено» и кнопку 👻 можно выключить
+- Всё из Swiftgram: вкладки, папки, компактный список чатов, ID в профиле, перевод, качество фото, размер стикеров и многое другое
 
-1. [**Obtain your own api_id**](https://core.telegram.org/api/obtaining_api_id) for your application.
-2. Please **do not** use the name Telegram for your app — or make sure your users understand that it is unofficial.
-3. Kindly **do not** use our standard logo (white paper plane in a blue circle) as your app's logo.
-3. Please study our [**security guidelines**](https://core.telegram.org/mtproto/security_guidelines) and take good care of your users' data and privacy.
-4. Please remember to publish **your** code too in order to comply with the licences.
+## Установка на iPhone
 
-# Quick Compilation Guide
+Lumen ставится как отдельное приложение через бесплатный Apple ID:
 
-## Get the Code
+1. Скачай `Lumen-*.ipa` из [Releases](../../releases) или артефактов сборки в Actions.
+2. Подключи iPhone к компьютеру и открой [iloader](https://github.com/nab138/iloader).
+3. Выбери **Import IPA** и укажи файл.
 
-```
-git clone --recursive -j8 https://github.com/Swiftgram/Telegram-iOS.git
-```
+С бесплатным Apple ID подпись действует **7 дней**: раз в неделю переустанови IPA через iloader. Чаты и вход при этом сохраняются. Ограничения бесплатного аккаунта: не больше 3 приложений, без push-уведомлений.
 
-## Setup Xcode
+## Сборка
 
-Install Xcode (directly from https://developer.apple.com/download/applications or using the App Store).
+Мак не нужен: IPA собирается в GitHub Actions на macOS-раннере.
 
-## Adjust Configuration
+1. Сделай форк репозитория.
+2. Получи `api_id` и `api_hash` на [my.telegram.org](https://my.telegram.org).
+3. В **Settings → Secrets and variables → Actions** добавь секреты `TELEGRAM_API_ID` и `TELEGRAM_API_HASH`.
+4. **Actions → Lumen iOS → Run workflow.** Сборка идёт около 1,5 часа, IPA появится в артефактах.
 
-1. Generate a random identifier:
-```
-openssl rand -hex 8
-```
-2. Create a new Xcode project. Use `Swiftgram` as the Product Name. Use `org.{identifier from step 1}` as the Organization Identifier.
-3. Open `Keychain Access` and navigate to `Certificates`. Locate `Apple Development: your@email.address (XXXXXXXXXX)` and double tap the certificate. Under `Details`, locate `Organizational Unit`. This is the Team ID.
-4. Edit `build-system/template_minimal_development_configuration.json`. Use data from the previous steps.
+Скрипт сборки: [ci/lumen_ci.py](ci/lumen_ci.py), workflow: [.github/workflows/lumen.yml](.github/workflows/lumen.yml).
 
-## Generate an Xcode project
+Движок плагинов собирается отдельно: после правок в `Swiftgram/LumenPlugins/Runtime` выполни
 
-```
-python3 build-system/Make/Make.py \
-    --cacheDir="$HOME/telegram-bazel-cache" \
-    generateProject \
-    --configurationPath=build-system/template_minimal_development_configuration.json \
-    --xcodeManagedCodesigning
-```
-
-# Advanced Compilation Guide
-
-## Xcode
-
-1. Copy and edit `build-system/appstore-configuration.json`.
-2. Copy `build-system/fake-codesigning`. Create and download provisioning profiles, using the `profiles` folder as a reference for the entitlements.
-3. Generate an Xcode project:
-```
-python3 build-system/Make/Make.py \
-    --cacheDir="$HOME/telegram-bazel-cache" \
-    generateProject \
-    --configurationPath=configuration_from_step_1.json \
-    --codesigningInformationPath=directory_from_step_2
+```bash
+python ci/plugins/build_runtime.py
 ```
 
-## IPA
+а затем проверь все плагины в node:
 
-1. Repeat the steps from the previous section. Use distribution provisioning profiles.
-2. Run:
-```
-python3 build-system/Make/Make.py \
-    --cacheDir="$HOME/telegram-bazel-cache" \
-    build \
-    --configurationPath=...see previous section... \
-    --codesigningInformationPath=...see previous section... \
-    --buildNumber=100001 \
-    --configuration=release_arm64
+```bash
+node ci/plugins/test_runtime.js путь/к/плагину.plugin
 ```
 
-# FAQ
+## Основа и лицензия
 
-## Xcode is stuck at "build-request.json not updated yet"
-
-Occasionally, you might observe the following message in your build log:
-```
-"/Users/xxx/Library/Developer/Xcode/DerivedData/Telegram-xxx/Build/Intermediates.noindex/XCBuildData/xxx.xcbuilddata/build-request.json" not updated yet, waiting...
-```
-
-Should this occur, simply cancel the ongoing build and initiate a new one.
-
-## Telegram_xcodeproj: no such package 
-
-Following a system restart, the auto-generated Xcode project might encounter a build failure accompanied by this error:
-```
-ERROR: Skipping '@rules_xcodeproj_generated//generator/Telegram/Telegram_xcodeproj:Telegram_xcodeproj': no such package '@rules_xcodeproj_generated//generator/Telegram/Telegram_xcodeproj': BUILD file not found in directory 'generator/Telegram/Telegram_xcodeproj' of external repository @rules_xcodeproj_generated. Add a BUILD file to a directory to mark it as a package.
-```
-
-If you encounter this issue, re-run the project generation steps in the README.
-
-
-# Tips
-
-## Codesigning is not required for simulator-only builds
-
-Add `--disableProvisioningProfiles`:
-```
-python3 build-system/Make/Make.py \
-    --cacheDir="$HOME/telegram-bazel-cache" \
-    generateProject \
-    --configurationPath=path-to-configuration.json \
-    --codesigningInformationPath=path-to-provisioning-data \
-    --disableProvisioningProfiles
-```
-
-## Versions
-
-Each release is built using a specific Xcode version (see `versions.json`). The helper script checks the versions of the installed software and reports an error if they don't match the ones specified in `versions.json`. It is possible to bypass these checks:
-
-```
-python3 build-system/Make/Make.py --overrideXcodeVersion build ... # Don't check the version of Xcode
-```
+Lumen основан на исходном коде [Telegram-iOS](https://github.com/TelegramMessenger/Telegram-iOS) и [Swiftgram](https://github.com/Swiftgram/Telegram-iOS) и распространяется на тех же условиях (GNU GPL v2). Движок Python-плагинов использует [Skulpt](https://skulpt.org) (MIT).
