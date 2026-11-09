@@ -25,3 +25,10 @@ def open_url(url):
 def current_chat():
     result = native("currentChat") or {}
     return int(result.get("dialogId", 0) or 0)
+
+
+def download_media(dialog_id, message_id, callback):
+    """Download a message's photo/video/file; callback(path) gets a local path or None."""
+    import _lumen_host
+    cb = _lumen_host.register_callback(lambda result: callback((result or {}).get("path")))
+    native("downloadMessageMedia", sourceDialogId=int(dialog_id), sourceMessageId=int(message_id), callback=cb)

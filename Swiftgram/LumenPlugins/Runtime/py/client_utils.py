@@ -62,8 +62,18 @@ def send_audio(peer, path, caption=None, *args, **kwargs):
     _send_file("document", peer, path, caption)
 
 
-def edit_message(*args, **kwargs):
-    _log("edit_message на iOS пока не поддерживается")
+def edit_message(peer, message_id, text, callback=None, *args, **kwargs):
+    """Edit a text message. peer is an Android-style dialog id; message_id the cloud id."""
+    import _lumen_tl
+    peer_id = _peer_of(peer)
+    if peer_id > 0:
+        input_peer = _lumen_tl.new("inputPeerUser", user_id=peer_id, access_hash=0)
+    elif peer_id < 0:
+        input_peer = _lumen_tl.new("inputPeerChannel", channel_id=-peer_id, access_hash=0)
+    else:
+        input_peer = _lumen_tl.new("inputPeerSelf")
+    req = _lumen_tl.new("messages.editMessage", peer=input_peer, id=int(message_id), message=str(text))
+    return send_request(req, callback)
 
 
 def send_request(request, callback=None, *args, **kwargs):

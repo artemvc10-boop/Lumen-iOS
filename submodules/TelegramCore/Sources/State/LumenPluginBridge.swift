@@ -182,6 +182,90 @@ func lumenSendMeme(accountPeerId: Int64, dialogId: Int64, replyToMessageId: Int3
     }).start()
 }
 
+/// The downloadable resource of a message's media, with a file extension.
+private func lumenMediaResource(_ media: Media) -> (MediaResource, String)? {
+    if let image = media as? TelegramMediaImage, let representation = largestImageRepresentation(image.representations) {
+        return (representation.resource, "jpg")
+    }
+    if let file = media as? TelegramMediaFile {
+        var ext = "bin"
+        if let fileName = file.fileName, !(fileName as NSString).pathExtension.isEmpty {
+            ext = (fileName as NSString).pathExtension.lowercased()
+        } else if file.mimeType.hasPrefix("video/") || file.isAnimated {
+            ext = "mp4"
+        } else if file.mimeType == "image/png" {
+            ext = "png"
+        } else if file.mimeType == "image/webp" || file.isSticker {
+            ext = "webp"
+        } else if file.mimeType == "image/gif" {
+            ext = "gif"
+        } else if file.mimeType.hasPrefix("image/") {
+            ext = "jpg"
+        }
+        return (file.resource, ext)
+    }
+    return nil
+}
+
+/// Downloads a message's media to a temp file and returns its path (nil on failure).
+func lumenDownloadMessageMedia(accountPeerId: Int64, sourceDialogId: Int64, sourceMessageId: Int32, completion: @escaping (String?) -> Void) {
+    guard let account = lumenAccounts.with({ $0[PeerId(accountPeerId)]?.account ?? $0.values.compactMap({ $0.account }).first }) else {
+        completion(nil)
+        return
+    }
+    let _ = (account.postbox.transaction { transaction -> (MediaResourceReference, MediaResource, String, PeerId)? in
+        guard let peerId = lumenResolveDialog(transaction: transaction, dialogId: sourceDialogId) else {
+            return nil
+        }
+        let messageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: sourceMessageId)
+        guard let message = transaction.getMessage(messageId) else {
+            return nil
+        }
+        for media in message.media {
+            if let (resource, ext) = lumenMediaResource(media) {
+                let reference = MediaResourceReference.media(media: AnyMediaReference.message(message: MessageReference(message), media: media), resource: resource)
+                return (reference, resource, ext, peerId)
+            }
+        }
+        return nil
+    }
+    |> deliverOnMainQueue).startStandalone(next: { result in
+        guard let (reference, resource, ext, peerId) = result else {
+            completion(nil)
+            return
+        }
+        let mediaBox = account.postbox.mediaBox
+        let deliver: () -> Void = {
+            guard let path = mediaBox.completedResourcePath(resource) else {
+                completion(nil)
+                return
+            }
+            let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("lumen-media", isDirectory: true)
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let target = folder.appendingPathComponent("\(peerId.toInt64())_\(sourceMessageId).\(ext)")
+            try? FileManager.default.removeItem(at: target)
+            do {
+                try FileManager.default.copyItem(at: URL(fileURLWithPath: path), to: target)
+                completion(target.path)
+            } catch {
+                completion(path)
+            }
+        }
+        if mediaBox.completedResourcePath(resource) != nil {
+            deliver()
+            return
+        }
+        let fetch = fetchedMediaResource(mediaBox: mediaBox, userLocation: .peer(peerId), userContentType: .file, reference: reference).start()
+        let _ = (mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> filter { $0.complete }
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { _ in
+            fetch.dispose()
+            deliver()
+        })
+    })
+}
+
 func lumenRegisterAccount(_ account: Account) {
     account.network.lumenAccountPeerId = account.peerId.toInt64()
     let _ = lumenAccounts.modify { current in
@@ -228,6 +312,11 @@ func lumenRegisterAccount(_ account: Account) {
     if LumenHooks.sendMeme == nil {
         LumenHooks.sendMeme = { accountPeerId, dialogId, replyToMessageId, sourceDialogId, sourceMessageId, path, kind, caption in
             lumenSendMeme(accountPeerId: accountPeerId, dialogId: dialogId, replyToMessageId: replyToMessageId, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId, path: path, kind: kind, caption: caption)
+        }
+    }
+    if LumenHooks.downloadMessageMedia == nil {
+        LumenHooks.downloadMessageMedia = { accountPeerId, sourceDialogId, sourceMessageId, completion in
+            lumenDownloadMessageMedia(accountPeerId: accountPeerId, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId, completion: completion)
         }
     }
 }

@@ -58,6 +58,9 @@ extension LumenPluginManager {
             return nil
         case "currentChat":
             return ["dialogId": LumenAppActions.currentChatDialogId]
+        case "downloadMessageMedia":
+            self.handleDownloadMessageMedia(arg)
+            return nil
         case "getSetting":
             return self.settingValue(pluginId: pluginId, key: arg["key"] as? String ?? "")
         case "setSetting":

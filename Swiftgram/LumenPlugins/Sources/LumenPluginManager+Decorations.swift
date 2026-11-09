@@ -45,6 +45,28 @@ extension LumenPluginManager {
         }
     }
 
+    /// downloadMessageMedia {sourceDialogId, sourceMessageId, callback}: fetches a message's
+    /// media to a file (downloading it if needed) and calls back with {path} or {path: null}.
+    func handleDownloadMessageMedia(_ arg: [String: Any]) {
+        let callback = (arg["callback"] as? NSNumber)?.intValue
+        let sourceDialogId = self.int64(arg["sourceDialogId"])
+        let sourceMessageId = Int32(truncatingIfNeeded: (arg["sourceMessageId"] as? NSNumber)?.intValue ?? 0)
+        guard let download = LumenHooks.downloadMessageMedia else {
+            if let callback {
+                self.fireCallback(callback, args: [["path": NSNull()]])
+            }
+            return
+        }
+        download(self.activeAccountPeerId != 0 ? self.activeAccountPeerId : self.primaryAccountPeerId, sourceDialogId, sourceMessageId) { [weak self] path in
+            guard let self, let callback else {
+                return
+            }
+            self.queue.async {
+                self.fireCallback(callback, args: [["path": path ?? NSNull()]])
+            }
+        }
+    }
+
     /// httpAsync {method, url, headers, body(base64), timeout, callback}: the callback gets
     /// the same dict `http` returns.
     func handleHTTPAsync(_ arg: [String: Any]) {

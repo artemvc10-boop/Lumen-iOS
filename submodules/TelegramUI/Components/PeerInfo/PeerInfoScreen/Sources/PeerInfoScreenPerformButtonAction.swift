@@ -397,7 +397,7 @@ extension PeerInfoScreenNode {
                 }
 
                 // MARK: Lumen: plugin chat actions (the "⋮" menu of a chat on Android).
-                let lumenChatItems = LumenPluginManager.shared.menuItems.filter { $0.kind == .chat }
+                let lumenChatItems = LumenPluginManager.shared.menuItems.filter { $0.kind == .chat || $0.kind == .profile }
                 if !lumenChatItems.isEmpty {
                     let lumenContext = LumenPluginMessageContext(accountPeerId: strongSelf.context.account.peerId.toInt64(), dialogId: lumenDialogId(peerId: strongSelf.peerId), messageId: 0, text: "", hasMedia: false)
                     for lumenItem in lumenChatItems {
