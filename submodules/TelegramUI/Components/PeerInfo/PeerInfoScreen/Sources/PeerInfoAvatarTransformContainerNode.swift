@@ -350,7 +350,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             }
             self.avatarNode.contentNode.layer.masksToBounds = true
             // MARK: Lumen: avatar shape and opacity from a plugin decoration.
-            if let peer, let avatarStyle = LumenDecorations.shared.decoration(userId: lumenDialogId(peerId: peer.id))?.avatar {
+            if let avatarStyle = LumenDecorations.shared.decoration(userId: lumenDialogId(peerId: peer.id))?.avatar {
                 let shape = CAShapeLayer()
                 shape.path = avatarStyle.path(size: CGSize(width: avatarSize, height: avatarSize)).cgPath
                 self.avatarNode.contentNode.layer.cornerRadius = 0.0
