@@ -178,7 +178,7 @@ extension LumenPluginManager {
         return ["width": width, "height": height]
     }
 
-    private func int64(_ value: Any?) -> Int64 {
+    func int64(_ value: Any?) -> Int64 {
         if let v = value as? Int64 { return v }
         if let v = value as? Int { return Int64(v) }
         if let v = value as? Double { return Int64(v) }

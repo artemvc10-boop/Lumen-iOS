@@ -62,7 +62,7 @@ extension LumenPluginManager {
                 return
             }
             self.queue.async {
-                self.fireCallback(callback, args: [["path": path ?? NSNull()]])
+                self.fireCallback(callback, args: [["path": path.map { $0 as Any } ?? NSNull()]])
             }
         }
     }
