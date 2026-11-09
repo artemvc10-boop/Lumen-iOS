@@ -320,3 +320,6 @@
 "Lumen.Appearance.HideEdited" = "Hide \"edited\" Label";
 "Lumen.Appearance.GhostButton" = "👻 Button in Chat List";
 "Lumen.Appearance.Notice" = "Messages deleted by others and view-once media are shown translucent and marked.";
+"Lumen.Background.Header" = "Background";
+"Lumen.Background.Enabled" = "Background Notifications";
+"Lumen.Background.Notice" = "Lumen stays connected while in the background and shows notifications for new messages itself (Telegram push does not reach this app). Uses more battery. After restarting the phone, open Lumen once.";

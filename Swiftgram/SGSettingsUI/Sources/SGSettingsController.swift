@@ -46,6 +46,7 @@ private enum SGControllerSection: Int32, SGItemListSection {
     case ghost // MARK: Lumen
     case history // MARK: Lumen
     case lumenContent // MARK: Lumen
+    case lumenBackground // MARK: Lumen
     case content
     case tabs
     case folders
@@ -80,6 +81,7 @@ private enum SGBoolSetting: String {
     case lumenTranslucentDeleted
     case lumenRetentionMarkers
     case lumenGhostButton
+    case lumenBackgroundMode
     case lumenHideEdited
     //
     case hidePhoneInSettings
@@ -204,7 +206,7 @@ private extension SGControllerSection {
             return .media
         case .profiles, .stories:
             return .profiles
-        case .trending, .content, .calls, .other:
+        case .trending, .content, .calls, .other, .lumenBackground:
             return .other
         }
     }
@@ -304,6 +306,9 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
     entries.append(.toggle(id: id.count, section: .lumenAppearance, settingName: .lumenHideEdited, value: ghost.hideEditedMark, text: i18n("Lumen.Appearance.HideEdited", lang), enabled: true))
     entries.append(.toggle(id: id.count, section: .lumenAppearance, settingName: .lumenGhostButton, value: ghost.ghostButtonInHeader, text: i18n("Lumen.Appearance.GhostButton", lang), enabled: true))
     entries.append(.notice(id: id.count, section: .lumenAppearance, text: i18n("Lumen.Appearance.Notice", lang)))
+    entries.append(.header(id: id.count, section: .lumenBackground, text: i18n("Lumen.Background.Header", lang), badge: nil))
+    entries.append(.toggle(id: id.count, section: .lumenBackground, settingName: .lumenBackgroundMode, value: ghost.backgroundMode, text: i18n("Lumen.Background.Enabled", lang), enabled: true))
+    entries.append(.notice(id: id.count, section: .lumenBackground, text: i18n("Lumen.Background.Notice", lang)))
     //
 
     if appConfiguration.sgWebSettings.global.canEditSettings {
@@ -545,6 +550,8 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
             LumenSettings.shared.set(value, for: .hideEditedMark)
         case .lumenGhostButton:
             LumenSettings.shared.set(value, for: .ghostButtonInHeader)
+        case .lumenBackgroundMode:
+            LumenSettings.shared.set(value, for: .backgroundMode)
         //
         case .hidePhoneInSettings:
             SGSimpleSettings.shared.hidePhoneInSettings = value

@@ -42,6 +42,9 @@ public final class LumenSettings {
         case hideEditedMark = "lumen.ui.hideEdited"
         /// Install plugins that are not on the verified list.
         case allowUnverifiedPlugins = "lumen.plugins.unverified"
+        /// Keep running in the background (silent audio) and show local notifications:
+        /// sideloaded builds get no push from Telegram's servers.
+        case backgroundMode = "lumen.background.enabled"
     }
 
     private static let defaultValues: [String: Any] = [
@@ -62,6 +65,7 @@ public final class LumenSettings {
         Key.ghostButtonInHeader.rawValue: true,
         Key.hideEditedMark.rawValue: false,
         Key.allowUnverifiedPlugins.rawValue: false,
+        Key.backgroundMode.rawValue: true,
     ]
 
     private let store: UserDefaults
@@ -114,4 +118,5 @@ public final class LumenSettings {
     public var ghostButtonInHeader: Bool { return self.value(.ghostButtonInHeader) }
     public var hideEditedMark: Bool { return self.value(.hideEditedMark) }
     public var allowUnverifiedPlugins: Bool { return self.value(.allowUnverifiedPlugins) }
+    public var backgroundMode: Bool { return self.value(.backgroundMode) }
 }

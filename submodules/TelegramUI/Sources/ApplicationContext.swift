@@ -1,5 +1,6 @@
 // MARK: Swiftgram
 import SGStrings
+import SGSimpleSettings
 //
 
 import Foundation
@@ -518,6 +519,25 @@ final class AuthorizedApplicationContext {
                                 }))
                             }
                         })
+                    }
+                } else if LumenSettings.shared.backgroundMode {
+                    // MARK: Lumen: in the background push would show these; it never reaches
+                    // a sideloaded build, so post them locally (LumenBackgroundKeeper keeps us alive).
+                    let displayPreview = strongSelf.inAppNotificationSettings?.displayNameOnLockscreen ?? true
+                    for (itemMessages, _, itemNotify, itemThreadData) in messageList {
+                        guard itemNotify, let itemFirst = itemMessages.first else {
+                            continue
+                        }
+                        let itemMuted = itemFirst.attributes.contains(where: { attribute in
+                            if let attribute = attribute as? NotificationInfoMessageAttribute {
+                                return attribute.flags.contains(.muted)
+                            }
+                            return false
+                        })
+                        if itemMuted || (itemFirst.id.peerId == context.account.peerId && !itemFirst.flags.contains(.WasScheduled)) {
+                            continue
+                        }
+                        lumenPostBackgroundNotification(context: strongSelf.context, messages: itemMessages, threadData: itemThreadData, displayPreview: displayPreview)
                     }
                 }
             }

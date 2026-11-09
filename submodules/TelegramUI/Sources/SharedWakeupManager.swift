@@ -9,6 +9,7 @@ import AccountContext
 import UniversalMediaPlayer
 import TelegramAudio
 import TelegramPresentationData
+import SGSimpleSettings
 
 private struct AccountTasks {
     let stateSynchronization: Bool
@@ -91,6 +92,9 @@ public final class SharedWakeupManager {
     private var managedPausedInBackgroundPlayer: Disposable?
     private var keepIdleDisposable: Disposable?
     private var silenceAudioRenderer: MediaPlayerAudioRenderer?
+    // MARK: Lumen: background mode (no push for sideloaded builds)
+    private let lumenKeeper = LumenBackgroundKeeper()
+    private var lumenSettingsObserver: NSObjectProtocol?
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
@@ -150,6 +154,7 @@ public final class SharedWakeupManager {
             }
             strongSelf.inForeground = value
             if value {
+                lumenRemoveBackgroundNotifications() // MARK: Lumen
                 strongSelf.activeExplicitExtensionTimer?.invalidate()
                 strongSelf.activeExplicitExtensionTimer = nil
                 if let activeExplicitExtensionTask = strongSelf.activeExplicitExtensionTask {
@@ -168,6 +173,14 @@ public final class SharedWakeupManager {
             strongSelf.checkTasks()
         })
         
+        // MARK: Lumen
+        self.lumenKeeper.stateChanged = { [weak self] in
+            self?.checkTasks()
+        }
+        self.lumenSettingsObserver = NotificationCenter.default.addObserver(forName: LumenSettings.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            self?.checkTasks()
+        })
+
         self.hasActiveAudioSessionDisposable = (hasActiveAudioSession
         |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
@@ -355,6 +368,9 @@ public final class SharedWakeupManager {
     }
     
     deinit {
+        if let lumenSettingsObserver = self.lumenSettingsObserver {
+            NotificationCenter.default.removeObserver(lumenSettingsObserver)
+        }
         self.accountSettingsDisposable?.dispose()
         self.inForegroundDisposable?.dispose()
         self.hasActiveAudioSessionDisposable?.dispose()
@@ -1097,6 +1113,14 @@ public final class SharedWakeupManager {
             }
         }
         
+        // MARK: Lumen: stay alive in the background while Telegram itself plays nothing.
+        let lumenKeepAlive = LumenSettings.shared.backgroundMode && !self.inForeground && !self.hasActiveAudioSession && !hasActiveCalls && !self.accountsAndTasks.isEmpty
+        if lumenKeepAlive {
+            self.lumenKeeper.start()
+        } else if self.lumenKeeper.isRunning {
+            self.lumenKeeper.stop(deactivate: !self.hasActiveAudioSession && !hasActiveCalls)
+        }
+        
         self.updateAccounts(hasTasks: hasTasksForBackgroundExtension, endTaskAfterTransactionsComplete: endTaskAfterTransactionsComplete)
         
         /*if !self.inForeground && pendingMessageCount != 0 && !self.hasActiveAudioSession {
@@ -1135,13 +1159,13 @@ public final class SharedWakeupManager {
     private func updateAccounts(hasTasks: Bool, endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?) {
         let hasBackgroundLocationTask = self.accountsAndTasks.contains(where: { $0.2.backgroundLocation })
         
-        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.backgroundProcessingTaskId != nil || self.backgroundStoryProcessingTaskId != nil || hasBackgroundLocationTask || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil {
+        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.backgroundProcessingTaskId != nil || self.backgroundStoryProcessingTaskId != nil || hasBackgroundLocationTask || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil || self.lumenKeeper.isRunning {
             Logger.shared.log("Wakeup", "enableBeginTransactions: true (active)")
             
             for (account, primary, tasks) in self.accountsAndTasks {
                 account.postbox.setCanBeginTransactions(true)
                 
-                if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) {
+                if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) || (self.lumenKeeper.isRunning && primary) {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                 } else {
                     account.shouldBeServiceTaskMaster.set(.single(.never))
