@@ -22,6 +22,7 @@ extension LumenPluginManager {
             }
         }
         self.installTLHooks()
+        self.installDecorationHooks()
     }
 
     // MARK: Load / unload

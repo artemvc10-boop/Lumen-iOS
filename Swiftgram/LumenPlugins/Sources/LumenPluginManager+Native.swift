@@ -73,6 +73,14 @@ extension LumenPluginManager {
             return self.handleZip(arg)
         case "http":
             return self.handleHTTP(arg)
+        case "httpAsync":
+            self.handleHTTPAsync(arg)
+            return nil
+        case "download":
+            self.handleDownload(pluginId: pluginId, arg)
+            return nil
+        case "decorationSet", "decorationClear":
+            return self.handleDecoration(op: op, arg: arg)
         case "sendMessage":
             LumenHooks.sendText?(self.activeAccountPeerId, self.int64(arg["dialogId"]), arg["text"] as? String ?? "")
             return nil
@@ -87,7 +95,7 @@ extension LumenPluginManager {
             DispatchQueue.main.async { UIPasteboard.general.string = text }
             return nil
         case "accountInfo":
-            return LumenPluginBridgeInfo.account(self.activeAccountPeerId)
+            return LumenPluginBridgeInfo.account(self.activeAccountPeerId != 0 ? self.activeAccountPeerId : self.primaryAccountPeerId)
         case "hash":
             return self.handleHash(arg)
         case "uuid":

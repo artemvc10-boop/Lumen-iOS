@@ -1,6 +1,7 @@
 import SGSimpleSettings // MARK: Swiftgram
 import Foundation
 import UIKit
+import AVFoundation
 import AsyncDisplayKit
 import Display
 import TelegramCore
@@ -92,7 +93,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let avatarListNode: PeerInfoAvatarListNode
     
     let backgroundBannerView: UIView
-    let backgroundCover = ComponentView<Empty>()
+    // MARK: Lumen: plugin decorations (LumenDecorations)
+    private var lumenBannerView: UIView?
+    private var lumenBannerRevision = -1
+    private var lumenRevision = 0
+    private var lumenThoughtView: UILabel?
+    private var lumenDecorationObserver: NSObjectProtocol?
+    private var lumenDecorationUserId: Int64?
+    private var lumenSoundPlayer: AVAudioPlayer?
+let backgroundCover = ComponentView<Empty>()
     let giftsCover = ComponentView<Empty>()
     var didSetupBackgroundCover = false
     let buttonsContainerNode: SparseNode
@@ -431,6 +440,55 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     deinit {
         self.emojiStatusPackDisposable.dispose()
+        if let lumenDecorationObserver = self.lumenDecorationObserver {
+            NotificationCenter.default.removeObserver(lumenDecorationObserver)
+        }
+        self.lumenSoundPlayer?.stop()
+    }
+
+    // MARK: Lumen
+    private func lumenDecoration(peer: EnginePeer?) -> LumenDecoration? {
+        guard let peer else {
+            return nil
+        }
+        let userId = lumenDialogId(peerId: peer.id)
+        if self.lumenDecorationUserId != userId {
+            self.lumenDecorationUserId = userId
+            if self.lumenDecorationObserver == nil {
+                self.lumenDecorationObserver = NotificationCenter.default.addObserver(forName: LumenDecorations.didChangeNotification, object: nil, queue: .main, using: { [weak self] notification in
+                    guard let self, let changed = notification.userInfo?["userId"] as? Int64, changed == self.lumenDecorationUserId else {
+                        return
+                    }
+                    self.lumenRevision += 1
+                    self.lumenPlaySound(restart: true)
+                    self.requestUpdateLayout?(false)
+                })
+            }
+            LumenDecorations.shared.noteProfileOpened(userId: userId)
+            DispatchQueue.main.async { [weak self] in
+                self?.lumenPlaySound(restart: false)
+            }
+        }
+        return LumenDecorations.shared.decoration(userId: userId)
+    }
+
+    private func lumenPlaySound(restart: Bool) {
+        guard let userId = self.lumenDecorationUserId else {
+            return
+        }
+        if restart {
+            self.lumenSoundPlayer?.stop()
+            self.lumenSoundPlayer = nil
+        }
+        guard self.lumenSoundPlayer == nil, let decoration = LumenDecorations.shared.decoration(userId: userId), let path = decoration.soundPath else {
+            return
+        }
+        if let player = try? AVAudioPlayer(contentsOf: URL(fileURLWithPath: path)) {
+            player.volume = decoration.soundVolume
+            player.prepareToPlay()
+            player.play()
+            self.lumenSoundPlayer = player
+        }
     }
     
     override func didLoad() {
@@ -642,7 +700,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             backgroundCoverSubject = nil
         }
-        
+        // MARK: Lumen: a plugin banner gives the header the colored-background layout.
+        let lumenDecoration = self.lumenDecoration(peer: peer)
+        if lumenDecoration?.banner != nil {
+            hasBackground = true
+        }
+
         let currentSavedMusic = self.profileMusic(peer: peer, screenData: screenData)
         let currentWalletBalance: Int64?
         if !self.isSettings, let balance = (screenData?.cachedData as? CachedUserData)?.walletCard?.balance, balance >= 100_000_000 {
@@ -1190,7 +1253,28 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.updateNavigationGlass?(navigationContentsCanBeExpanded ? .plain : .tinted(headerButtonBackgroundColor), navigationTransition)
         
         self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: navigationTransition)
-        self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
+        // MARK: Lumen: name color and glow from a plugin decoration.
+        if let nameStyle = lumenDecoration?.name, !state.isEditing {
+            if let nameColor = nameStyle.primaryColor {
+                self.titleNode.updateTintColor(color: nameColor, transition: navigationTransition)
+            }
+            if let glowColor = nameStyle.glowColor {
+                self.titleNode.layer.shadowColor = glowColor.cgColor
+                self.titleNode.layer.shadowRadius = nameStyle.glowRadius
+                self.titleNode.layer.shadowOpacity = Float(nameStyle.glowStrength)
+                self.titleNode.layer.shadowOffset = .zero
+            } else if let shadowColor = nameStyle.shadowColor {
+                self.titleNode.layer.shadowColor = shadowColor.cgColor
+                self.titleNode.layer.shadowRadius = nameStyle.shadowRadius
+                self.titleNode.layer.shadowOpacity = 1.0
+                self.titleNode.layer.shadowOffset = nameStyle.shadowOffset
+            } else {
+                self.titleNode.layer.shadowOpacity = 0.0
+            }
+        } else {
+            self.titleNode.layer.shadowOpacity = 0.0
+        }
+self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
         self.panelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
         var titleBrightness: CGFloat = 0.0
         navigationContentsPrimaryColor.getHue(nil, saturation: nil, brightness: &titleBrightness, alpha: nil)
@@ -2445,6 +2529,23 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             environment: {},
             containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
         )
+        // MARK: Lumen: plugin banner over the built-in cover.
+        if let banner = lumenDecoration?.banner {
+            if self.lumenBannerRevision != self.lumenRevision || self.lumenBannerView == nil {
+                self.lumenBannerView?.removeFromSuperview()
+                let bannerView = LumenDecorationDrawing.makeView(banner)
+                self.backgroundBannerView.addSubview(bannerView)
+                self.lumenBannerView = bannerView
+                self.lumenBannerRevision = self.lumenRevision
+            }
+            if let bannerView = self.lumenBannerView {
+                self.backgroundBannerView.bringSubviewToFront(bannerView)
+                LumenDecorationDrawing.layout(bannerView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: CGSize(width: bannerFrame.width, height: backgroundCoverSize.height)))
+            }
+        } else if let bannerView = self.lumenBannerView {
+            bannerView.removeFromSuperview()
+            self.lumenBannerView = nil
+        }
         if let backgroundCoverView = self.backgroundCover.view as? PeerInfoCoverComponent.View {
             if backgroundCoverView.superview == nil {
                 self.backgroundBannerView.addSubview(backgroundCoverView)
@@ -2803,7 +2904,37 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if isFirstTime {
             self.updateAvatarMask(transition: .immediate)
         }
-        
+
+        // MARK: Lumen: the "thought" bubble by the avatar.
+        if let thoughtText = lumenDecoration?.thoughtText, !state.isEditing {
+            let thoughtView: UILabel
+            if let current = self.lumenThoughtView {
+                thoughtView = current
+            } else {
+                thoughtView = UILabel()
+                thoughtView.font = Font.medium(13.0)
+                thoughtView.textAlignment = .center
+                thoughtView.numberOfLines = 2
+                thoughtView.layer.masksToBounds = true
+                thoughtView.isUserInteractionEnabled = false
+                self.view.addSubview(thoughtView)
+                self.lumenThoughtView = thoughtView
+            }
+            thoughtView.text = thoughtText
+            thoughtView.textColor = lumenDecoration?.thoughtColor ?? .white
+            thoughtView.backgroundColor = lumenDecoration?.thoughtBackground ?? UIColor(white: 0.0, alpha: 0.45)
+            let maxWidth = min(220.0, width * 0.55)
+            let textSize = thoughtView.sizeThatFits(CGSize(width: maxWidth - 20.0, height: 60.0))
+            let size = CGSize(width: min(maxWidth, ceil(textSize.width) + 20.0), height: ceil(textSize.height) + 10.0)
+            thoughtView.layer.cornerRadius = min(14.0, size.height / 2.0)
+            let origin = CGPoint(x: min(width - size.width - 8.0, apparentAvatarFrame.maxX - 14.0), y: apparentAvatarFrame.minY - size.height + 6.0)
+            transition.updateFrame(view: thoughtView, frame: CGRect(origin: origin, size: size))
+            transition.updateAlpha(layer: thoughtView.layer, alpha: (self.isAvatarExpanded || titleCollapseFraction > 0.3) ? 0.0 : 1.0)
+        } else if let thoughtView = self.lumenThoughtView {
+            thoughtView.removeFromSuperview()
+            self.lumenThoughtView = nil
+        }
+
         return resolvedHeight
     }
     

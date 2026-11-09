@@ -114,6 +114,18 @@ public final class LumenPluginManager: ObservableObject {
 
     /// Account the current hook/menu call belongs to; Lumen.send uses it.
     var activeAccountPeerId: Int64 = 0
+
+    /// The primary account, set by the app; used when no hook/menu is active (e.g. a plugin
+    /// reading its own user id from a settings screen).
+    public func setPrimaryAccount(peerId: Int64) {
+        self.queue.async {
+            if self.activeAccountPeerId == 0 {
+                self.activeAccountPeerId = peerId
+            }
+            self.primaryAccountPeerId = peerId
+        }
+    }
+    var primaryAccountPeerId: Int64 = 0
     /// Native plugins (the meme library) register here to receive menu clicks.
     var nativeHandlers: [String: LumenNativePlugin] = [:]
 

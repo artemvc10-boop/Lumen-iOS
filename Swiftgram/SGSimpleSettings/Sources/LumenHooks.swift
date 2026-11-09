@@ -55,6 +55,14 @@ public enum LumenHooks {
     /// Sends a local file: kind is "photo", "video" or "document". Installed by TelegramCore.
     public static var sendFile: ((_ accountPeerId: Int64, _ dialogId: Int64, _ path: String, _ kind: String, _ caption: String) -> Void)?
 
+    // MARK: Decorations (see LumenDecorations)
+
+    /// A profile was opened (Android-style dialog id). Main queue.
+    public static var profileOpened: ((_ userId: Int64) -> Void)?
+
+    /// Users whose messages showed up in a chat, batched. Main queue.
+    public static var chatUsersSeen: ((_ userIds: [Int64]) -> Void)?
+
     // MARK: Raw TL hooks (exteraGram's pre_request_hook / post_request_hook / on_update_hook)
 
     /// Names plugins subscribed to, in Android form (`TL_messages_sendMessage`,

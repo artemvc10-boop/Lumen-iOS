@@ -260,6 +260,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
+    private var lumenPrimaryAccountDisposable: Disposable? // MARK: Lumen
     private var statusBarHost: ApplicationStatusBarHost?
     private var dataImportSplash: LegacyDataImportSplash?
     private var memoryUsageOverlayView: UILabel?
@@ -1266,6 +1267,22 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }).start()
                 return true
             }
+            // MARK: Lumen: the current account's own user id (Android-style dialog id) for plugins.
+            LumenPluginBridgeInfo.accountProvider = { peerId in
+                let peer = PeerId(peerId)
+                let dialogId = lumenDialogId(peerId: peer)
+                return ["userId": dialogId, "dialogId": dialogId, "isUser": peer.namespace == Namespaces.Peer.CloudUser]
+            }
+            self.lumenPrimaryAccountDisposable = (sharedContext.activeAccountContexts
+            |> map { primary, _, _ -> Int64? in
+                return primary?.account.peerId.toInt64()
+            }
+            |> distinctUntilChanged
+            |> deliverOnMainQueue).start(next: { peerId in
+                if let peerId {
+                    LumenPluginManager.shared.setPrimaryAccount(peerId: peerId)
+                }
+            })
             //
 
             presentationDataPromise.set(sharedContext.presentationData)

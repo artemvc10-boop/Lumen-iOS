@@ -180,6 +180,12 @@ class ContentResolver(object):
 # MARK: Activity / fragment
 
 _results = {"hooks": []}
+# Direct one-shot callbacks keyed by request code (lumen.media.pick).
+_direct_results = {}
+
+
+def register_direct_result(request_code, callback):
+    _direct_results[int(request_code)] = callback
 
 
 class Activity(object):
@@ -366,6 +372,10 @@ class _HookParam(object):
 
 def deliver_result(request_code, path, mime):
     import _lumen_host
+    direct = _direct_results.pop(int(request_code), None)
+    if direct is not None:
+        _lumen_host.safe_call(direct, path, mime)
+        return
     if path:
         data = Intent()
         data.setDataAndType(Uri("file://" + str(path)), mime or "*/*")

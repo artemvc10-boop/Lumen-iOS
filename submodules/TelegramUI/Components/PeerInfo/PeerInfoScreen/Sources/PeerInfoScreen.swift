@@ -227,7 +227,12 @@ enum TopicsLimitedReason {
 
 final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
     weak var controller: PeerInfoScreenImpl?
-    
+    // MARK: Lumen: page background and colors from a plugin decoration.
+    private var lumenBackgroundView: UIView?
+    private var lumenBackgroundRevision = -1
+    private var lumenRevision = 0
+    private var lumenDecorationObserver: NSObjectProtocol?
+
     let context: AccountContext
     let peerId: EnginePeer.Id
     let isOpenedFromChat: Bool
@@ -480,7 +485,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.peerId = peerId
         self.isOpenedFromChat = isOpenedFromChat
         self.videoCallsEnabled = true
-        self.presentationData = controller.presentationData
+        self.presentationData = lumenDecoratedPresentationData(controller.presentationData, peerId: peerId)
         self.reactionSourceMessageId = reactionSourceMessageId
         self.sourceMessageId = sourceMessageId
         self.callMessages = callMessages
@@ -519,9 +524,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, updatedPresentationData: controller.updatedPresentationData, peerId: peerId, chatLocation: chatLocation, sharedMediaFromForumTopic: sharedMediaFromForumTopic, chatLocationContextHolder: chatLocationContextHolder, isMediaOnly: self.isMediaOnly, initialPaneKey: initialPaneKey, initialStoryFolderId: switchToStoryFolder, initialGiftCollectionId: switchToGiftCollection, switchToMediaTarget: switchToMediaTarget)
         
         super.init()
-        
+
+        // MARK: Lumen
+        let lumenUserId = lumenDialogId(peerId: peerId)
+        self.lumenDecorationObserver = NotificationCenter.default.addObserver(forName: LumenDecorations.didChangeNotification, object: nil, queue: .main, using: { [weak self] notification in
+            guard let self, let changed = notification.userInfo?["userId"] as? Int64, changed == lumenUserId, let controller = self.controller else {
+                return
+            }
+            self.lumenRevision += 1
+            self.updatePresentationData(controller.presentationData)
+        })
+
         self.paneContainerNode.parentController = controller
-        
+
         self._interaction = PeerInfoInteraction(
             // MARK: Swiftgram
             notifyTextCopied: { [weak self] in
@@ -2723,6 +2738,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     deinit {
+        if let lumenDecorationObserver = self.lumenDecorationObserver {
+            NotificationCenter.default.removeObserver(lumenDecorationObserver)
+        }
         self.dataDisposable?.dispose()
         self.walletStickersPreloadDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
@@ -5600,8 +5618,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
 
     func updatePresentationData(_ presentationData: PresentationData) {
-        self.presentationData = presentationData
-        
+        self.presentationData = lumenDecoratedPresentationData(presentationData, peerId: self.peerId)
+
         self.updateBackgroundColor()
     
         
@@ -5643,9 +5661,26 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return
         }
         self.validLayout = (layout, navigationHeight)
-        
+
+        // MARK: Lumen: a gradient or image page background behind everything.
+        if let background = LumenDecorations.shared.decoration(userId: lumenDialogId(peerId: self.peerId))?.background, lumenBackgroundNeedsView(background) {
+            if self.lumenBackgroundRevision != self.lumenRevision || self.lumenBackgroundView == nil {
+                self.lumenBackgroundView?.removeFromSuperview()
+                let backgroundView = LumenDecorationDrawing.makeView(background)
+                self.view.insertSubview(backgroundView, at: 0)
+                self.lumenBackgroundView = backgroundView
+                self.lumenBackgroundRevision = self.lumenRevision
+            }
+            if let backgroundView = self.lumenBackgroundView {
+                LumenDecorationDrawing.layout(backgroundView, frame: CGRect(origin: CGPoint(), size: layout.size))
+            }
+        } else if let backgroundView = self.lumenBackgroundView {
+            backgroundView.removeFromSuperview()
+            self.lumenBackgroundView = nil
+        }
+
         self.headerNode.customNavigationContentNode = self.paneContainerNode.currentPane?.node.navigationContentNode
-        
+
         var isScrollEnabled = !self.isMediaOnly && self.headerNode.customNavigationContentNode == nil
         if self.state.selectedStoryIds != nil || self.state.paneIsReordering {
             isScrollEnabled = false
@@ -7842,3 +7877,42 @@ extension PeerInfoScreenNode {
     }
 }
 //
+
+
+// MARK: Lumen
+
+/// A solid background without dim/fade is drawn by the theme color alone.
+private func lumenBackgroundNeedsView(_ fill: LumenFill) -> Bool {
+    if case .color = fill.kind, fill.dim == 0.0, fill.fade == 0.0 {
+        return false
+    }
+    return true
+}
+
+/// The profile page's colors with a plugin decoration applied (page background, block,
+/// text, hint and action colors).
+private func lumenDecoratedPresentationData(_ presentationData: PresentationData, peerId: EnginePeer.Id) -> PresentationData {
+    guard let decoration = LumenDecorations.shared.decoration(userId: lumenDialogId(peerId: peerId)), decoration.changesPageColors else {
+        return presentationData
+    }
+    let theme = presentationData.theme
+    let list = theme.list
+    var pageColor: UIColor?
+    if let background = decoration.background {
+        if case let .color(color) = background.kind, !lumenBackgroundNeedsView(background) {
+            pageColor = color.withAlphaComponent(background.alpha)
+        } else {
+            pageColor = .clear
+        }
+    }
+    let updatedList = list.withUpdated(
+        blocksBackgroundColor: pageColor,
+        plainBackgroundColor: pageColor,
+        itemPrimaryTextColor: decoration.textColor,
+        itemSecondaryTextColor: decoration.hintColor,
+        itemAccentColor: decoration.actionColor,
+        itemBlocksBackgroundColor: decoration.blocksColor
+    )
+    let updatedTheme = PresentationTheme(name: theme.name, index: theme.index, referenceTheme: theme.referenceTheme, overallDarkAppearance: theme.overallDarkAppearance, intro: theme.intro, passcode: theme.passcode, rootController: theme.rootController, list: updatedList, chatList: theme.chatList, chat: theme.chat, actionSheet: theme.actionSheet, contextMenu: theme.contextMenu, inAppNotification: theme.inAppNotification, chart: theme.chart, preview: theme.preview)
+    return presentationData.withUpdated(theme: updatedTheme)
+}

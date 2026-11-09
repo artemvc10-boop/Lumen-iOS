@@ -500,3 +500,22 @@ def tl_hook(payload):
         return json.dumps({"decision": "error", "code": int(getattr(error, "code", 400) or 400),
                            "text": str(getattr(error, "text", "PLUGIN_ERROR"))})
     return json.dumps({"decision": "replace", "data": _lumen_tl.to_json(value)})
+
+
+# MARK: Decorations (lumen.profile)
+
+def decor_event(payload):
+    request = json.loads(payload)
+    kind = request.get("kind")
+    for record in list(_plugins.values()):
+        instance = record["instance"]
+        if kind == "profile":
+            fn = getattr(instance, "on_profile_open", None)
+            if callable(fn):
+                _run(record["id"], "on_profile_open", fn, int(request.get("userId", 0)))
+        elif kind == "chat":
+            fn = getattr(instance, "on_chat_users", None)
+            if callable(fn):
+                _run(record["id"], "on_chat_users", fn, [int(x) for x in request.get("userIds") or []])
+    _refresh_views()
+    return json.dumps({"ok": True})

@@ -14,6 +14,7 @@ import SwiftSignalKit
 import TelegramUniversalVideoContent
 import PeerInfoAvatarListNode
 import TelegramCore
+import SGSimpleSettings
 import EmojiStatusComponent
 import GalleryUI
 import HierarchyTrackingLayer
@@ -348,7 +349,18 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 self.avatarNode.contentNode.layer.cornerRadius = avatarCornerRadius
             }
             self.avatarNode.contentNode.layer.masksToBounds = true
-            
+            // MARK: Lumen: avatar shape and opacity from a plugin decoration.
+            if let peer, let avatarStyle = LumenDecorations.shared.decoration(userId: lumenDialogId(peerId: peer.id))?.avatar {
+                let shape = CAShapeLayer()
+                shape.path = avatarStyle.path(size: CGSize(width: avatarSize, height: avatarSize)).cgPath
+                self.avatarNode.contentNode.layer.cornerRadius = 0.0
+                self.avatarNode.contentNode.layer.mask = shape
+                self.avatarNode.contentNode.alpha = avatarStyle.alpha
+            } else if self.avatarNode.contentNode.layer.mask != nil {
+                self.avatarNode.contentNode.layer.mask = nil
+                self.avatarNode.contentNode.alpha = 1.0
+            }
+
             self.isFirstAvatarLoading = false
             
             self.containerNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))

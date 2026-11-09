@@ -2623,8 +2623,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
                 }
             }
+            // MARK: Lumen: author name color from a plugin decoration.
+            if incoming, let effectiveAuthor, let lumenDecoration = LumenDecorations.shared.decoration(userId: lumenDialogId(peerId: effectiveAuthor.id)) {
+                if let lumenNameColor = lumenDecoration.chat?.nameColor ?? lumenDecoration.name?.primaryColor {
+                    authorNameColor = lumenNameColor
+                }
+            }
         }
-        
+        // MARK: Lumen: let plugins know whose decorations to load.
+        if let lumenAuthorId = effectiveAuthor?.id ?? firstMessage.author?.id {
+            LumenDecorations.shared.noteSeenInChat(userId: lumenDialogId(peerId: lumenAuthorId))
+        }
+
         let translateToLanguage = item.associatedData.translateToLanguage
         var isSummarized = false
         if item.controllerInteraction.summarizedMessageIds.contains(item.message.id) {
@@ -2905,7 +2915,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         rankBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                     }
                 }
-                
+                // MARK: Lumen: a plugin tag (clan tag) where no rank is shown.
+                if rankBadgeString == nil, incoming, let effectiveAuthor, let lumenChat = LumenDecorations.shared.decoration(userId: lumenDialogId(peerId: effectiveAuthor.id))?.chat, let lumenTag = lumenChat.tagText {
+                    rankBadgeString = NSAttributedString(string: lumenTag, font: inlineBotPrefixFont, textColor: lumenChat.tagColor ?? messageTheme.secondaryTextColor)
+                }
+
                 var viaSuffix: NSAttributedString?
                 if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                     let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedString.Key.font: nameFont, NSAttributedString.Key.foregroundColor: authorNameColor])

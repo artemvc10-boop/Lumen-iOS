@@ -7,6 +7,7 @@ import TelegramPresentationData
 import AccountContext
 import AvatarNode
 import TelegramCore
+import SGSimpleSettings
 import TelegramUniversalVideoContent
 import UniversalMediaPlayer
 import GalleryUI
@@ -973,7 +974,11 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
 
     private let containerNode: ContextControllerSourceNode
     public let avatarNode: AvatarNode
-    private var avatarVideoNode: AvatarVideoNode?
+    // MARK: Lumen: ring and shape from a plugin decoration.
+    private var lumenRingLayer: CAShapeLayer?
+    private var lumenUserId: Int64?
+    private var lumenDecorationObserver: NSObjectProtocol?
+private var avatarVideoNode: AvatarVideoNode?
         
     private var cachedDataDisposable = MetaDisposable()
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
@@ -1045,6 +1050,9 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     
     deinit {
         self.cachedDataDisposable.dispose()
+        if let lumenDecorationObserver = self.lumenDecorationObserver {
+            NotificationCenter.default.removeObserver(lumenDecorationObserver)
+        }
     }
 
     public func setCustomLetters(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, letters: [String], emptyColor: UIColor) {
@@ -1082,7 +1090,20 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         } else {
             self.avatarNode.setPeer(context: context, theme: theme, peer: enginePeer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))
         }
-        
+        // MARK: Lumen
+        let lumenUserId = lumenDialogId(peerId: peer.id)
+        self.lumenUserId = lumenUserId
+        LumenDecorations.shared.noteSeenInChat(userId: lumenUserId)
+        if self.lumenDecorationObserver == nil {
+            self.lumenDecorationObserver = NotificationCenter.default.addObserver(forName: LumenDecorations.didChangeNotification, object: nil, queue: .main, using: { [weak self] notification in
+                guard let self, let changed = notification.userInfo?["userId"] as? Int64, changed == self.lumenUserId else {
+                    return
+                }
+                self.lumenApplyDecoration()
+            })
+        }
+        self.lumenApplyDecoration()
+
         if peer.isPremium && context.sharedContext.energyUsageSettings.autoplayVideo {
             self.cachedDataDisposable.set((context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.CachedData(id: peer.id))
             |> deliverOnMainQueue).startStrict(next: { [weak self] cachedData in
@@ -1235,6 +1256,43 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.avatarNode.position = avatarFrame.center
         self.avatarNode.bounds = CGRect(origin: CGPoint(), size: avatarFrame.size)
         self.avatarNode.updateSize(size: avatarFrame.size)
+        self.lumenApplyDecoration()
+    }
+
+    // MARK: Lumen
+    private func lumenApplyDecoration() {
+        let size = CGSize(width: avatarHeaderSize(), height: avatarHeaderSize())
+        let decoration = self.lumenUserId.flatMap { LumenDecorations.shared.decoration(userId: $0) }
+        if let avatarStyle = decoration?.avatar, avatarStyle.shape != 0 {
+            let mask = CAShapeLayer()
+            mask.path = avatarStyle.path(size: size).cgPath
+            self.avatarNode.layer.mask = mask
+        } else {
+            self.avatarNode.layer.mask = nil
+        }
+        if let chat = decoration?.chat, !chat.ringColors.isEmpty {
+            let ring: CAShapeLayer
+            if let current = self.lumenRingLayer {
+                ring = current
+            } else {
+                ring = CAShapeLayer()
+                ring.fillColor = UIColor.clear.cgColor
+                self.containerNode.layer.addSublayer(ring)
+                self.lumenRingLayer = ring
+            }
+            let width = max(1.0, min(4.0, chat.ringWidth))
+            let inset = -(width / 2.0 + 1.5)
+            let ringRect = CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset)
+            let path = decoration?.avatar?.path(size: ringRect.size) ?? UIBezierPath(ovalIn: CGRect(origin: .zero, size: ringRect.size))
+            path.apply(CGAffineTransform(translationX: ringRect.minX, y: ringRect.minY))
+            ring.path = path.cgPath
+            ring.lineWidth = width
+            ring.strokeColor = chat.ringColors[0].cgColor
+            ring.frame = CGRect(origin: .zero, size: size)
+        } else if let ring = self.lumenRingLayer {
+            ring.removeFromSuperlayer()
+            self.lumenRingLayer = nil
+        }
     }
 
     override public func animateRemoved(duration: Double) {

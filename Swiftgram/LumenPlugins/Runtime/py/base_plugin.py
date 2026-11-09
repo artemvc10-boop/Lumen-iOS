@@ -152,6 +152,14 @@ class BasePlugin(object):
     def on_app_event(self, event_type):
         pass
 
+    # A profile screen opened; user_id is the Android-style dialog id (see lumen.profile).
+    def on_profile_open(self, user_id):
+        pass
+
+    # Users whose messages or avatars appeared in a chat (batched).
+    def on_chat_users(self, user_ids):
+        pass
+
     def create_settings(self):
         return []
 
