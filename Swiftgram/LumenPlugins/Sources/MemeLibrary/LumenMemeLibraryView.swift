@@ -13,6 +13,7 @@ struct LumenMemeLibraryView: View {
     @ObservedObject var store: LumenMemeStore
     let dialogId: Int64
     let accountPeerId: Int64
+    var replyToMessageId: Int32 = 0
     let close: () -> Void
 
     @State private var query = ""
@@ -355,7 +356,13 @@ struct LumenMemeLibraryView: View {
             } else {
                 kind = "photo"
             }
-            LumenHooks.sendFile?(self.accountPeerId, self.dialogId, url.path, kind, "")
+            // Resend by reference when the meme was saved from a message (instant, no re-upload);
+            // reply to the composed message when one is set.
+            if LumenHooks.sendMeme != nil {
+                LumenHooks.sendMeme?(self.accountPeerId, self.dialogId, self.replyToMessageId, meme.sourceDialogId, meme.sourceMessageId, url.path, kind, "")
+            } else {
+                LumenHooks.sendFile?(self.accountPeerId, self.dialogId, url.path, kind, "")
+            }
             sent += 1
         }
         self.selected = []

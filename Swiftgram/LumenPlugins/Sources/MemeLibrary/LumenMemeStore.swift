@@ -13,20 +13,27 @@ struct LumenMeme: Codable, Identifiable, Equatable {
     var category: String
     var timestamp: Double
     var favorite: Bool
+    /// Where the meme was saved from (Lumen-only), so it can be resent by reference instead
+    /// of re-uploaded: the Android-style dialog id and the cloud message id. 0 = unknown.
+    var sourceDialogId: Int64
+    var sourceMessageId: Int32
 
     var id: String { return self.filepath }
 
     enum CodingKeys: String, CodingKey {
         case filename, filepath, tags, category, timestamp, favorite
+        case sourceDialogId = "lumen_source_dialog", sourceMessageId = "lumen_source_message"
     }
 
-    init(filename: String, filepath: String, tags: String, category: String, timestamp: Double, favorite: Bool) {
+    init(filename: String, filepath: String, tags: String, category: String, timestamp: Double, favorite: Bool, sourceDialogId: Int64 = 0, sourceMessageId: Int32 = 0) {
         self.filename = filename
         self.filepath = filepath
         self.tags = tags
         self.category = category
         self.timestamp = timestamp
         self.favorite = favorite
+        self.sourceDialogId = sourceDialogId
+        self.sourceMessageId = sourceMessageId
     }
 
     init(from decoder: Decoder) throws {
@@ -37,6 +44,8 @@ struct LumenMeme: Codable, Identifiable, Equatable {
         self.category = (try? c.decode(String.self, forKey: .category)) ?? ""
         self.timestamp = (try? c.decode(Double.self, forKey: .timestamp)) ?? 0
         self.favorite = (try? c.decode(Bool.self, forKey: .favorite)) ?? false
+        self.sourceDialogId = (try? c.decode(Int64.self, forKey: .sourceDialogId)) ?? 0
+        self.sourceMessageId = (try? c.decode(Int32.self, forKey: .sourceMessageId)) ?? 0
     }
 
     var isVideo: Bool {
@@ -174,7 +183,7 @@ final class LumenMemeStore: ObservableObject {
     }
 
     /// Copies `source` into the meme folder and records it.
-    func add(source: URL, category rawCategory: String, description: String) throws {
+    func add(source: URL, category rawCategory: String, description: String, sourceDialogId: Int64 = 0, sourceMessageId: Int32 = 0) throws {
         let category = String(rawCategory.trimmingCharacters(in: .whitespacesAndNewlines).prefix(LumenMemeStore.maxCategoryLength))
         var categories = self.categories
         if !category.isEmpty && !categories.contains(category) {
@@ -205,7 +214,7 @@ final class LumenMemeStore: ObservableObject {
             throw SaveError.copyFailed
         }
         var memes = self.memes
-        memes.append(LumenMeme(filename: name, filepath: self.storedPath(forFileName: name), tags: description.trimmingCharacters(in: .whitespacesAndNewlines), category: category, timestamp: now, favorite: false))
+        memes.append(LumenMeme(filename: name, filepath: self.storedPath(forFileName: name), tags: description.trimmingCharacters(in: .whitespacesAndNewlines), category: category, timestamp: now, favorite: false, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId))
         self.save(memes: memes, categories: categories)
     }
 
@@ -380,6 +389,10 @@ final class LumenMemeStore: ObservableObject {
             var copy = meme
             copy.filename = name
             copy.filepath = self.storedPath(forFileName: name)
+            // The source message id belongs to another account/library; drop it so the meme
+            // uploads normally here instead of pointing at an unrelated message.
+            copy.sourceDialogId = 0
+            copy.sourceMessageId = 0
             memes.append(copy)
             added += 1
         }

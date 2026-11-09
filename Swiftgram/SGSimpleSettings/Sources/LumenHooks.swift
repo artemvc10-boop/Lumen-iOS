@@ -55,6 +55,12 @@ public enum LumenHooks {
     /// Sends a local file: kind is "photo", "video" or "document". Installed by TelegramCore.
     public static var sendFile: ((_ accountPeerId: Int64, _ dialogId: Int64, _ path: String, _ kind: String, _ caption: String) -> Void)?
 
+    /// Sends a meme to a chat, reusing the original upload when possible. If `sourceMessageId`
+    /// is non-zero, the meme was saved from that message (in `sourceDialogId`): its media is
+    /// resent by reference — instant, no re-upload — falling back to uploading `path` when the
+    /// source is gone. `replyToMessageId` (non-zero) posts it as a reply in the target chat.
+    public static var sendMeme: ((_ accountPeerId: Int64, _ dialogId: Int64, _ replyToMessageId: Int32, _ sourceDialogId: Int64, _ sourceMessageId: Int32, _ path: String, _ kind: String, _ caption: String) -> Void)?
+
     // MARK: Decorations (see LumenDecorations)
 
     /// A profile was opened (Android-style dialog id). Main queue.

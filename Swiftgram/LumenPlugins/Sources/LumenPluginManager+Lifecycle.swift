@@ -215,9 +215,9 @@ extension LumenPluginManager {
 
     /// The plugin button in a chat's input field: runs the only chat action right away, or
     /// lets the person pick one when several plugins offer them.
-    public func presentChatActions(accountPeerId: Int64, dialogId: Int64) {
+    public func presentChatActions(accountPeerId: Int64, dialogId: Int64, replyToMessageId: Int32 = 0) {
         let items = self.menuItems.filter { $0.kind == .chat }
-        let context = LumenPluginMessageContext(accountPeerId: accountPeerId, dialogId: dialogId, messageId: 0, text: "", hasMedia: false)
+        let context = LumenPluginMessageContext(accountPeerId: accountPeerId, dialogId: dialogId, messageId: 0, text: "", hasMedia: false, replyToMessageId: replyToMessageId)
         if items.count == 1, let item = items.first {
             self.performMenuItem(item, context: context)
             return

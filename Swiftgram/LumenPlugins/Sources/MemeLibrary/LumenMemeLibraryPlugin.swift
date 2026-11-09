@@ -49,18 +49,18 @@ final class LumenMemeLibraryPlugin: LumenNativePlugin {
                 LumenToast.show("Файл не найден. Откройте медиа, чтобы оно скачалось.", kind: .error)
                 return
             }
-            self.presentSaveForm(url: URL(fileURLWithPath: path))
+            self.presentSaveForm(url: URL(fileURLWithPath: path), sourceDialogId: context.dialogId, sourceMessageId: context.messageId)
         case .library:
-            self.openLibrary(dialogId: context.dialogId, accountPeerId: context.accountPeerId)
+            self.openLibrary(dialogId: context.dialogId, accountPeerId: context.accountPeerId, replyToMessageId: context.replyToMessageId)
         }
     }
 
     @available(iOS 15.0, *)
-    func openLibrary(dialogId: Int64, accountPeerId: Int64) {
+    func openLibrary(dialogId: Int64, accountPeerId: Int64, replyToMessageId: Int32 = 0) {
         let store = self.store
         store.reload()
         var hosting: UIViewController?
-        let view = LumenMemeLibraryView(store: store, dialogId: dialogId, accountPeerId: accountPeerId, close: {
+        let view = LumenMemeLibraryView(store: store, dialogId: dialogId, accountPeerId: accountPeerId, replyToMessageId: replyToMessageId, close: {
             hosting?.dismiss(animated: true)
         })
         let controller = UIHostingController(rootView: view)
@@ -74,12 +74,12 @@ final class LumenMemeLibraryPlugin: LumenNativePlugin {
     }
 
     @available(iOS 15.0, *)
-    private func presentSaveForm(url: URL) {
+    private func presentSaveForm(url: URL, sourceDialogId: Int64 = 0, sourceMessageId: Int32 = 0) {
         let store = self.store
         store.reload()
         let view = LumenMemeFormView(title: "Сохранить в мемы", imageURL: url, categories: store.categories, category: "", description: "") { category, description in
             do {
-                try store.add(source: url, category: category, description: description)
+                try store.add(source: url, category: category, description: description, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId)
                 LumenToast.show("Мем сохранён!", kind: .success)
             } catch LumenMemeStore.SaveError.categoryLimit {
                 LumenToast.show("Лимит категорий (\(LumenMemeStore.maxCategories)) достигнут", kind: .error)

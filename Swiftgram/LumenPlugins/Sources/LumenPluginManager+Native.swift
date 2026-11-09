@@ -235,7 +235,7 @@ extension LumenPluginManager {
     }
 }
 
-enum LumenPluginBridgeInfo {
+public enum LumenPluginBridgeInfo {
     /// Set by the app so plugins can read the current account. Kept here to avoid a
     /// TelegramCore dependency inside the engine module.
     public static var accountProvider: ((Int64) -> [String: Any])?

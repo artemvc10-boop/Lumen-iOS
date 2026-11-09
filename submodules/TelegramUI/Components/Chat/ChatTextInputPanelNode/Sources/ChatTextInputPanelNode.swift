@@ -6061,7 +6061,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 case .lumenPlugins:
                     // MARK: Lumen
                     if let context = self.context, let peerId = self.presentationInterfaceState?.chatLocation.peerId {
-                        LumenPluginManager.shared.presentChatActions(accountPeerId: context.account.peerId.toInt64(), dialogId: lumenDialogId(peerId: peerId))
+                        let replyToMessageId = self.presentationInterfaceState?.interfaceState.replyMessageSubject?.messageId
+                        let lumenReply: Int32 = (replyToMessageId?.peerId == peerId) ? (replyToMessageId?.id ?? 0) : 0
+                        LumenPluginManager.shared.presentChatActions(accountPeerId: context.account.peerId.toInt64(), dialogId: lumenDialogId(peerId: peerId), replyToMessageId: lumenReply)
                     }
                 case .suggestPost:
                     self.interfaceInteraction?.openSuggestPost(nil, .default)

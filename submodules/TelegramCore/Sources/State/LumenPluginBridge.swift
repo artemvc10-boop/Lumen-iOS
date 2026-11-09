@@ -130,6 +130,58 @@ private func lumenFileMessage(account: Account, path: String, kind: String, capt
 }
 
 /// Lets plugins send messages from this account. Called for main-app accounts only.
+/// The Android-style dialog id -> reply subject in the target chat (a cloud message).
+private func lumenReplySubject(peerId: PeerId, replyToMessageId: Int32) -> EngineMessageReplySubject? {
+    guard replyToMessageId != 0 else {
+        return nil
+    }
+    let messageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMessageId)
+    return EngineMessageReplySubject(messageId: messageId, quote: nil, innerSubject: nil)
+}
+
+/// A resendable media in `message` (photo, video or document; never a webpage or service action).
+private func lumenSendableMedia(_ message: Message) -> Media? {
+    for media in message.media {
+        if media is TelegramMediaImage || media is TelegramMediaFile {
+            return media
+        }
+    }
+    return nil
+}
+
+/// Sends a meme, reusing its original upload when the source message is still around.
+func lumenSendMeme(accountPeerId: Int64, dialogId: Int64, replyToMessageId: Int32, sourceDialogId: Int64, sourceMessageId: Int32, path: String, kind: String, caption: String) {
+    guard let account = lumenAccounts.with({ $0[PeerId(accountPeerId)]?.account }) else {
+        return
+    }
+    let _ = (account.postbox.transaction { transaction -> (PeerId, EnqueueMessage)? in
+        guard let peerId = lumenResolveDialog(transaction: transaction, dialogId: dialogId) else {
+            return nil
+        }
+        let reply = lumenReplySubject(peerId: peerId, replyToMessageId: replyToMessageId)
+        // Resend by reference when the meme came from a message that is still present.
+        if sourceMessageId != 0, let sourcePeerId = lumenResolveDialog(transaction: transaction, dialogId: sourceDialogId) {
+            let sourceId = MessageId(peerId: sourcePeerId, namespace: Namespaces.Message.Cloud, id: sourceMessageId)
+            if let sourceMessage = transaction.getMessage(sourceId), let media = lumenSendableMedia(sourceMessage) {
+                let reference = AnyMediaReference.message(message: MessageReference(sourceMessage), media: media)
+                let message = EnqueueMessage.message(text: caption, attributes: [], inlineStickers: [:], mediaReference: reference, threadId: nil, replyToMessageId: reply, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                return (peerId, message)
+            }
+        }
+        // Otherwise upload the local file.
+        guard let fileMessage = lumenFileMessage(account: account, path: path, kind: kind, caption: caption) else {
+            return nil
+        }
+        return (peerId, fileMessage.withUpdatedReplyToMessageId(reply))
+    }
+    |> mapToSignal { result -> Signal<[MessageId?], NoError> in
+        guard let (peerId, message) = result else {
+            return .single([])
+        }
+        return enqueueMessages(account: account, peerId: peerId, messages: [message])
+    }).start()
+}
+
 func lumenRegisterAccount(_ account: Account) {
     account.network.lumenAccountPeerId = account.peerId.toInt64()
     let _ = lumenAccounts.modify { current in
@@ -171,6 +223,11 @@ func lumenRegisterAccount(_ account: Account) {
                 }
                 return [message]
             })
+        }
+    }
+    if LumenHooks.sendMeme == nil {
+        LumenHooks.sendMeme = { accountPeerId, dialogId, replyToMessageId, sourceDialogId, sourceMessageId, path, kind, caption in
+            lumenSendMeme(accountPeerId: accountPeerId, dialogId: dialogId, replyToMessageId: replyToMessageId, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId, path: path, kind: kind, caption: caption)
         }
     }
 }

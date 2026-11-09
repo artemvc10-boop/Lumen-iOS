@@ -52,14 +52,18 @@ public struct LumenPluginMessageContext {
     public let hasMedia: Bool
     /// The message's photo/video/file, copied where plugins may read it.
     public let mediaPath: String?
+    /// A message in this chat the user is replying to (0 = none). Set when a chat action
+    /// opens while a reply is being composed.
+    public let replyToMessageId: Int32
 
-    public init(accountPeerId: Int64, dialogId: Int64, messageId: Int32, text: String, hasMedia: Bool, mediaPath: String? = nil) {
+    public init(accountPeerId: Int64, dialogId: Int64, messageId: Int32, text: String, hasMedia: Bool, mediaPath: String? = nil, replyToMessageId: Int32 = 0) {
         self.accountPeerId = accountPeerId
         self.dialogId = dialogId
         self.messageId = messageId
         self.text = text
         self.hasMedia = hasMedia
         self.mediaPath = mediaPath
+        self.replyToMessageId = replyToMessageId
     }
 }
 
