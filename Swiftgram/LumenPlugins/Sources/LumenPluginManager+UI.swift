@@ -31,7 +31,7 @@ extension LumenPluginManager {
         }
     }
 
-    private func fireCallback(_ id: Int, args: [Any] = []) {
+    func fireCallback(_ id: Int, args: [Any] = []) {
         self.hostCall("run_callback", ["id": id, "args": args])
         self.runDeferred()
     }

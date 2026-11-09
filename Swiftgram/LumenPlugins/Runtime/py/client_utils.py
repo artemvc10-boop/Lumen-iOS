@@ -67,8 +67,31 @@ def edit_message(*args, **kwargs):
 
 
 def send_request(request, callback=None, *args, **kwargs):
-    _log("send_request (сырые TL-запросы) на iOS не поддерживается")
-    return 0
+    """Sends any TL request; callback(response, error) like Android's RequestDelegate.
+
+    `request` is a TLObject (TLRPC.TL_messages_getHistory(...), lumen.tl.new(...)) or a dict
+    in the app's JSON form. The callback may also be an object with `run(response, error)`.
+    """
+    import _lumen_tl
+    import _lumen_host
+    from _lumen_bridge import native
+    payload = request if isinstance(request, dict) else _lumen_tl.to_json(request)
+    callback_id = None
+    if callback is not None:
+        target = callback if callable(callback) else getattr(callback, "run", None)
+
+        def deliver(response, error):
+            if target is None:
+                return
+            value = _lumen_tl.from_json(response) if response is not None else None
+            failure = None
+            if error is not None:
+                failure = _lumen_tl.TL_error(error.get("code", 0), error.get("text", ""))
+            target(value, failure)
+
+        callback_id = _lumen_host.register_callback(deliver)
+    native("tlRequest", request=payload, callback=callback_id)
+    return callback_id or 0
 
 
 def run_on_ui_thread(fn, delay=0, *args, **kwargs):

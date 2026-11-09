@@ -242,6 +242,7 @@ def unload_plugin(payload):
         return json.dumps({"ok": True})
     _run(plugin_id, "on_plugin_unload", record["instance"].on_plugin_unload)
     _lumen.forget_module(record["module"])
+    push_tl_interest()
     import _lumen_activity
     _lumen_activity.remove_plugin_hooks(plugin_id)
     for callback_id in [k for k, v in _callbacks.items() if v[0] == plugin_id]:
@@ -402,3 +403,100 @@ def run_callback(payload):
 def drop_callback(payload):
     _callbacks.pop(json.loads(payload)["id"], None)
     return json.dumps({"ok": True})
+
+
+# MARK: Raw TL hooks (pre_request_hook / post_request_hook / on_update_hook)
+
+_last_interest = [None]
+
+
+def push_tl_interest():
+    """Tells the app which request/update names any plugin hooks, so it only converts those."""
+    exact = set()
+    substrings = set()
+    for record in list(_plugins.values()):
+        for hook in getattr(record["instance"], "_lumen_hooks", None) or []:
+            if hook[1]:
+                substrings.add(hook[0])
+            else:
+                exact.add(hook[0])
+    key = (tuple(sorted(exact)), tuple(sorted(substrings)))
+    if key == _last_interest[0]:
+        return
+    _last_interest[0] = key
+    bridge.native("setTLHooks", exact=list(key[0]), substrings=list(key[1]))
+
+
+_TL_METHODS = {"pre": "pre_request_hook", "post": "post_request_hook", "update": "on_update_hook"}
+
+
+def _tl_chain(name, method):
+    records = []
+    for record in list(_plugins.values()):
+        instance = record["instance"]
+        priority = instance.hook_priority(name) if hasattr(instance, "hook_priority") else None
+        if priority is None or not callable(getattr(instance, method, None)):
+            continue
+        records.append((priority, record))
+    records.sort(key=lambda pair: -pair[0])
+    return [pair[1] for pair in records]
+
+
+def tl_hook(payload):
+    import _lumen_tl
+    request = json.loads(payload)
+    kind = request.get("kind")
+    name = request.get("name", "")
+    method = _TL_METHODS.get(kind)
+    if method is None:
+        return json.dumps({"decision": "keep"})
+    chain = _tl_chain(name, method)
+    if not chain:
+        return json.dumps({"decision": "keep"})
+    raw = request.get("data")
+    data = json.loads(raw) if raw else None
+    if kind == "post":
+        value = _lumen_tl.from_json(data.get("result")) if isinstance(data, dict) else None
+    else:
+        value = _lumen_tl.from_json(data)
+    error = None
+    if request.get("errorText") is not None:
+        error = _lumen_tl.TL_error(request.get("errorCode", 0), request.get("errorText"))
+    original_error = error
+    changed = False
+    for record in chain:
+        fn = getattr(record["instance"], method)
+        if kind == "post":
+            result = _run(record["id"], method, fn, name, 0, value, error)
+        else:
+            result = _run(record["id"], method, fn, name, 0, value)
+        if not isinstance(result, HookResult):
+            continue
+        if result.strategy == HookStrategy.CANCEL:
+            return json.dumps({"decision": "cancel", "plugin": record["id"]})
+        if result.strategy in (HookStrategy.MODIFY, HookStrategy.MODIFY_FINAL):
+            if kind == "pre" and result.request is not None:
+                value = result.request
+                changed = True
+            elif kind == "update" and result.update is not None:
+                value = result.update
+                changed = True
+            elif kind == "post":
+                if result.response is not None:
+                    value = result.response
+                    error = None
+                    changed = True
+                elif result.error is not None:
+                    error = result.error
+                    changed = True
+            if result.strategy == HookStrategy.MODIFY_FINAL:
+                break
+    _refresh_views()
+    if not changed:
+        return json.dumps({"decision": "keep"})
+    if kind == "post" and error is not None:
+        if error is original_error:
+            return json.dumps({"decision": "keep"})
+        return json.dumps({"decision": "error", "code": int(getattr(error, "code", 400) or 400),
+                           "text": str(getattr(error, "text", "PLUGIN_ERROR"))})
+    return json.dumps({"decision": "replace", "data": _lumen_tl.to_json(value)})

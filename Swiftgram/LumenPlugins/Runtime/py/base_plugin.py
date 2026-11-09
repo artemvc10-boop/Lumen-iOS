@@ -200,17 +200,30 @@ class BasePlugin(object):
         if hooks is None:
             hooks = []
             self._lumen_hooks = hooks
-        hooks.append((str(name), bool(match_substring)))
+        hooks.append((str(name), bool(match_substring), int(priority or 0)))
+        import _lumen_host
+        _lumen_host.push_tl_interest()
 
     def remove_hook(self, name):
         hooks = getattr(self, "_lumen_hooks", None) or []
         self._lumen_hooks = [h for h in hooks if h[0] != name]
+        import _lumen_host
+        _lumen_host.push_tl_interest()
 
     def wants_hook(self, name):
-        for hook_name, substring in getattr(self, "_lumen_hooks", None) or []:
+        return self.hook_priority(name) is not None
+
+    def hook_priority(self, name):
+        """The highest priority among this plugin's hooks matching `name`, or None."""
+        best = None
+        for hook in getattr(self, "_lumen_hooks", None) or []:
+            hook_name = hook[0]
+            substring = hook[1]
+            priority = hook[2] if len(hook) > 2 else 0
             if hook_name == name or (substring and hook_name in name):
-                return True
-        return False
+                if best is None or priority > best:
+                    best = priority
+        return best
 
     # Java method hooking has no iOS equivalent; these succeed and do nothing.
     def hook_method(self, method, hook, priority=0, *args, **kwargs):

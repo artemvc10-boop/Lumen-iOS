@@ -945,7 +945,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
         case rich(Api.RichMessage)
     }
     
-    for update in sortedUpdates(updates) {
+    // MARK: Lumen: plugin update hooks
+    for update in lumenFilterUpdates(accountPeerId: accountPeerId, sortedUpdates(updates)) {
         switch update {
             case let .updateChannelTooLong(updateChannelTooLongData):
                 let (channelId, channelPts) = (updateChannelTooLongData.channelId, updateChannelTooLongData.pts)

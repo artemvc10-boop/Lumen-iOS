@@ -907,6 +907,9 @@ private final class NetworkSpeedLimitedEventState {
 
 public final class Network: NSObject {
     public let encryptionProvider: EncryptionProvider
+    /// MARK: Lumen: the main-app account this network belongs to (0 for others); plugin
+    /// request hooks only run for those.
+    var lumenAccountPeerId: Int64 = 0
     
     private let queue: Queue
     public let datacenterId: Int
@@ -1374,6 +1377,32 @@ public final class Network: NSObject {
     }
     
     func requestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<NetworkRequestResult<T>, MTRpcError> {
+        // MARK: Lumen: plugin request hooks
+        if let name = lumenHookedRequestName(network: self, function: data.0) {
+            let accountPeerId = self.lumenAccountPeerId
+            return lumenApplyPreRequestHook(accountPeerId: accountPeerId, name: name, data: data)
+            |> mapToSignal { [weak self] data -> Signal<NetworkRequestResult<T>, MTRpcError> in
+                guard let self else {
+                    return .never()
+                }
+                return self.lumenPlainRequestWithAdditionalInfo(data, info: info, tag: tag, automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError)
+                |> `catch` { error -> Signal<NetworkRequestResult<T>, MTRpcError> in
+                    return lumenApplyPostRequestErrorHook(accountPeerId: accountPeerId, name: name, parse: data.2, error: error)
+                    |> map { NetworkRequestResult<T>.result($0) }
+                }
+                |> mapToSignal { result -> Signal<NetworkRequestResult<T>, MTRpcError> in
+                    if case let .result(value) = result {
+                        return lumenApplyPostRequestHook(accountPeerId: accountPeerId, name: name, parse: data.2, result: value)
+                        |> map { NetworkRequestResult<T>.result($0) }
+                    }
+                    return .single(result)
+                }
+            }
+        }
+        return self.lumenPlainRequestWithAdditionalInfo(data, info: info, tag: tag, automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError)
+    }
+
+    private func lumenPlainRequestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag?, automaticFloodWait: Bool, onFloodWaitError: ((String) -> Void)?) -> Signal<NetworkRequestResult<T>, MTRpcError> {
         let requestService = self.requestService
         return Signal { [requestService] subscriber in
             let request = NetworkEngineRequest(
@@ -1420,6 +1449,27 @@ public final class Network: NSObject {
     }
     
     func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
+        // MARK: Lumen: plugin request hooks
+        if let name = lumenHookedRequestName(network: self, function: data.0) {
+            let accountPeerId = self.lumenAccountPeerId
+            return lumenApplyPreRequestHook(accountPeerId: accountPeerId, name: name, data: data)
+            |> mapToSignal { [weak self] data -> Signal<T, MTRpcError> in
+                guard let self else {
+                    return .never()
+                }
+                return self.lumenPlainRequest(data, tag: tag, automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError)
+                |> `catch` { error -> Signal<T, MTRpcError> in
+                    return lumenApplyPostRequestErrorHook(accountPeerId: accountPeerId, name: name, parse: data.2, error: error)
+                }
+                |> mapToSignal { value -> Signal<T, MTRpcError> in
+                    return lumenApplyPostRequestHook(accountPeerId: accountPeerId, name: name, parse: data.2, result: value)
+                }
+            }
+        }
+        return self.lumenPlainRequest(data, tag: tag, automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError)
+    }
+
+    private func lumenPlainRequest<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag?, automaticFloodWait: Bool, onFloodWaitError: ((String) -> Void)?) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { [requestService] subscriber in
             let request = NetworkEngineRequest(

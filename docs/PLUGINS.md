@@ -65,7 +65,8 @@ class MyPlugin(BasePlugin):
 | Модуль | Что есть |
 |---|---|
 | `base_plugin` | `BasePlugin` (get/set_setting, log, add_menu_item, add_on_send_message_hook, add_hook), `MenuItemData`, `MenuItemType`, `HookResult`, `HookStrategy`, `AppEvent` |
-| `client_utils` | `send_message`, `send_text`, `send_photo`, `send_document`, `send_video`, `run_on_ui_thread`, `get_user_config` |
+| `client_utils` | `send_request` (любой TL-запрос), `send_message`, `send_text`, `send_photo`, `send_document`, `send_video`, `run_on_ui_thread`, `get_user_config` |
+| `org.telegram.tgnet` | `TLRPC.TL_*` (создать объект, `isinstance`), `TLObject` |
 | `ui.settings` | `Header`, `Divider`, `Switch`, `Input`, `EditText`, `Selector`, `Text` |
 | `ui.bulletin` | `BulletinHelper.show_info/show_error/show_success/...` |
 | `ui.alert` | `AlertDialogBuilder` (нативное окно с кнопками и списком) |
@@ -82,12 +83,56 @@ class MyPlugin(BasePlugin):
 
 - **Перехват Java-методов** (`hook_method`, `hook_all_methods`, `find_class`, Xposed) — на iOS нет Java. Такие вызовы не падают, но ничего не делают, и плагин об этом пишет в журнал. Например, iOS Liquid Glass загрузится, но работать не будет: iOS 26 рисует «стекло» сама.
 - **Android View и ресурсы** (`LinearLayout`, `BitmapFactory`, `R.drawable.*` и т. п.) — это заглушки. Плагины со своим сложным UI на Android-виджетах покажут пустоту; их логику нужно переписывать на `create_settings`, меню и `AlertDialogBuilder`.
-- **`pre_request_hook` / `post_request_hook`** (сырые TL-запросы) — не поддерживаются.
 - Синтаксис `nonlocal` и оператор `:=` движок не выполняет; при установке об этом предупреждают.
 
 ## Отличия от exteraGram
 
 Плагины exteraGram перехватывают методы Java-клиента Android (Xposed). На iPhone этого нет, поэтому часть таких плагинов работает лишь частично. Хуки верхнего уровня переносятся один в один: `on_send_message_hook` → так же, `on_update_hook` → так же, пункты меню → `add_menu_item`, `create_settings` → так же.
+
+## Сырые TL-запросы и апдейты (как в exteraGram)
+
+Подписка по имени Android-класса, точно или по подстроке, с приоритетом. Цепочка плагинов
+и стратегии (`DEFAULT`, `MODIFY`, `MODIFY_FINAL`, `CANCEL`) такие же, как в exteraGram.
+
+```python
+from base_plugin import BasePlugin, HookResult, HookStrategy
+from org.telegram.tgnet import TLRPC
+from client_utils import send_request
+
+class P(BasePlugin):
+    def on_plugin_load(self):
+        self.add_hook("TL_messages_setTyping")                  # точное имя
+        self.add_hook("TL_messages_send", match_substring=True)  # все send*
+        self.add_hook("TL_updateUserStatus", priority=10)
+
+    def pre_request_hook(self, name, account, request):
+        if name == "TL_messages_setTyping":
+            return HookResult(strategy=HookStrategy.CANCEL)       # запрос не уйдёт
+        request.silent = True                                    # true-флаги — как поля
+        return HookResult(strategy=HookStrategy.MODIFY, request=request)
+
+    def post_request_hook(self, name, account, response, error):
+        return HookResult()                                      # можно подменить response/error
+
+    def on_update_hook(self, name, account, update):
+        return HookResult()                                      # CANCEL / MODIFY update
+
+    def load(self):
+        req = TLRPC.TL_messages_getHistory()
+        req.peer = TLRPC.TL_inputPeerSelf()
+        req.limit = 10
+        send_request(req, lambda response, error: self.log(len(response.messages)))
+```
+
+Поля называются по схеме TL (`random_id`, `peer.user_id`), как на Android. `long` — обычный
+`int` без потери точности. Флаги проставляются сами по наличию полей.
+
+Ограничения iOS:
+- апдейты с `pts` (новые сообщения, правки…) отменить нельзя — это порвёт последовательность
+  апдейтов; их можно изменить;
+- `TL_updateNewMessage` / `TL_updateNewChannelMessage` приходят через упрощённый объект
+  сообщения (`update.message.text`, `dialog_id`, `chat_type`), в том числе для коротких апдейтов;
+- на апдейт у плагинов 0.3 с, потом он применяется без изменений.
 
 ## Нативные экраны (только Lumen)
 

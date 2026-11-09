@@ -41,6 +41,12 @@ extension LumenPluginManager {
         case "menuChanged":
             DispatchQueue.main.async { self.publish() }
             return nil
+        case "setTLHooks":
+            self.setTLHookInterest(arg)
+            return nil
+        case "tlRequest":
+            self.sendTLRequest(arg)
+            return nil
         case "getSetting":
             return self.settingValue(pluginId: pluginId, key: arg["key"] as? String ?? "")
         case "setSetting":

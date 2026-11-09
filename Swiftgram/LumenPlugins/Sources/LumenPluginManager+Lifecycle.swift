@@ -21,6 +21,7 @@ extension LumenPluginManager {
                 self?.deliverIncoming(messages)
             }
         }
+        self.installTLHooks()
     }
 
     // MARK: Load / unload
