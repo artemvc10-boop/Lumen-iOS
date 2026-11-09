@@ -302,6 +302,31 @@ final class AuthorizedApplicationContext {
         }))
 
         let engine = context.engine
+        // MARK: Lumen: app actions plugins can trigger (lumen.app) — open a chat/profile by id.
+        LumenAppActions.openChat = { [weak self] dialogId, messageId in
+            guard let self else {
+                return
+            }
+            self.lumenResolvePeer(dialogId: dialogId) { peer in
+                guard let peer else {
+                    return
+                }
+                let subject: ChatControllerSubject? = messageId != 0 ? .message(id: .id(MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) : nil
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peer), subject: subject))
+            }
+        }
+        LumenAppActions.openProfile = { [weak self] userId in
+            guard let self else {
+                return
+            }
+            self.lumenResolvePeer(dialogId: userId) { peer in
+                guard let peer, let controller = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                    return
+                }
+                self.rootController.pushViewController(controller)
+            }
+        }
+
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
         |> mapToSignal { messageList in
             return engine.data.get(EngineDataMap(
@@ -884,6 +909,30 @@ final class AuthorizedApplicationContext {
                 self.rootController.presentOverlay(controller: overlayController, inGlobal: true, blockInteraction: false)
             }
         }
+    }
+
+    // MARK: Lumen: resolve an Android-style dialog id to its peer via the engine (no postbox).
+    private func lumenResolvePeer(dialogId: Int64, completion: @escaping (EnginePeer?) -> Void) {
+        var candidates: [EnginePeer.Id] = []
+        if dialogId > 0 {
+            candidates.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(dialogId)))
+        } else if dialogId < 0 {
+            let raw = EnginePeer.Id.Id._internalFromInt64Value(-dialogId)
+            candidates.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: raw))
+            candidates.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: raw))
+        } else {
+            candidates.append(EnginePeer.Id(dialogId))
+        }
+        let _ = (self.context.engine.data.get(EngineDataMap(candidates.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0) }))
+        |> deliverOnMainQueue).startStandalone(next: { peers in
+            for id in candidates {
+                if let maybePeer = peers[id], let peer = maybePeer {
+                    completion(peer)
+                    return
+                }
+            }
+            completion(nil)
+        })
     }
     
     deinit {

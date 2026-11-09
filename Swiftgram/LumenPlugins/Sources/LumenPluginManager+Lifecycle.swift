@@ -184,6 +184,9 @@ extension LumenPluginManager {
 
     public func performMenuItem(_ item: LumenPluginMenuItem, context: LumenPluginMessageContext) {
         LumenScreenInfo.refresh()
+        if context.dialogId != 0 {
+            LumenAppActions.currentChatDialogId = context.dialogId
+        }
         self.queue.async {
             self.activeAccountPeerId = context.accountPeerId
             if let native = self.nativeHandlers[item.pluginId] {

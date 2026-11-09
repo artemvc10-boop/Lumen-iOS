@@ -166,6 +166,22 @@ class P(BasePlugin):
 `ui.alert(title, message, buttons=[("OK", handler)])`. Поиск: `screen(..., search=True)`,
 текст приходит в `on_search` у `ui.present(build, on_search=...)`.
 
+## Действия над приложением (только Lumen)
+
+```python
+from lumen import app
+app.open_chat(user_id)               # открыть диалог (id: пользователь = id, группа/канал = -id)
+app.open_chat(chat_id, message_id)   # ...с переходом к сообщению
+app.open_profile(user_id)            # открыть профиль
+app.open_url("tg://resolve?domain=durov")   # любая tg:// или https ссылка
+where = app.current_chat()           # id чата на экране, или 0
+```
+
+Почти вся навигация уже доступна и через `app.open_url` с `tg://`-ссылками
+(`tg://user?id=`, `tg://resolve?domain=`, `tg://privatepost?channel=…&post=…`). Всё, что
+касается данных — отправка, правка, удаление, пересылка, реакции, прочтение, история, поиск —
+делается через `send_request` (сырые TL-запросы), без изменений клиента.
+
 ## Настройки клиента (только Lumen)
 
 ```python

@@ -47,6 +47,17 @@ extension LumenPluginManager {
         case "tlRequest":
             self.sendTLRequest(arg)
             return nil
+        case "openChat":
+            let dialogId = self.int64(arg["dialogId"])
+            let messageId = Int32(truncatingIfNeeded: (arg["messageId"] as? NSNumber)?.intValue ?? 0)
+            DispatchQueue.main.async { LumenAppActions.openChat?(dialogId, messageId) }
+            return nil
+        case "openProfile":
+            let userId = self.int64(arg["userId"])
+            DispatchQueue.main.async { LumenAppActions.openProfile?(userId) }
+            return nil
+        case "currentChat":
+            return ["dialogId": LumenAppActions.currentChatDialogId]
         case "getSetting":
             return self.settingValue(pluginId: pluginId, key: arg["key"] as? String ?? "")
         case "setSetting":
