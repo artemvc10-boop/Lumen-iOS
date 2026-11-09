@@ -537,7 +537,7 @@ final class AuthorizedApplicationContext {
                         if itemMuted || (itemFirst.id.peerId == context.account.peerId && !itemFirst.flags.contains(.WasScheduled)) {
                             continue
                         }
-                        lumenPostBackgroundNotification(context: strongSelf.context, messages: itemMessages, threadData: itemThreadData, displayPreview: displayPreview)
+                        lumenPostBackgroundNotification(context: strongSelf.context, messages: itemMessages.map(EngineMessage.init), threadData: itemThreadData, displayPreview: displayPreview)
                     }
                 }
             }

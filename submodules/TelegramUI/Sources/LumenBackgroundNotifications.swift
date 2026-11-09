@@ -1,6 +1,5 @@
 import Foundation
 import UserNotifications
-import Postbox
 import TelegramCore
 import AccountContext
 import TelegramStringFormatting
@@ -12,7 +11,7 @@ import LocalizedPeerData
 /// (see LumenBackgroundKeeper). Telegram normally does this with push, which never reaches a
 /// sideloaded build. The payload uses the keys AppDelegate already understands, so a tap
 /// opens the chat.
-func lumenPostBackgroundNotification(context: AccountContext, messages: [Message], threadData: MessageHistoryThreadData?, displayPreview: Bool) {
+func lumenPostBackgroundNotification(context: AccountContext, messages: [EngineMessage], threadData: MessageHistoryThreadData?, displayPreview: Bool) {
     guard let message = messages.first else {
         return
     }
@@ -37,7 +36,7 @@ func lumenPostBackgroundNotification(context: AccountContext, messages: [Message
         var body = ""
         let contentSettings = context.currentContentSettings.with { $0 }
         for item in messages.prefix(1) {
-            body = descriptionStringForMessage(contentSettings: contentSettings, message: EngineMessage(item), strings: strings, nameDisplayOrder: nameOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId).0.string
+            body = descriptionStringForMessage(contentSettings: contentSettings, message: item, strings: strings, nameDisplayOrder: nameOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId).0.string
         }
         if messages.count > 1 && body.isEmpty {
             body = "\(messages.count) 📎"
@@ -49,7 +48,7 @@ func lumenPostBackgroundNotification(context: AccountContext, messages: [Message
             return false
         } ?? false))
         if isGroup, let author = message.author {
-            content.subtitle = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameOrder)
+            content.subtitle = author.displayTitle(strings: strings, displayOrder: nameOrder)
         }
         content.title = title
         content.body = body.isEmpty ? " " : body
