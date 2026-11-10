@@ -311,7 +311,7 @@ final class AuthorizedApplicationContext {
                 guard let peer else {
                     return
                 }
-                let subject: ChatControllerSubject? = messageId != 0 ? .message(id: .id(MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) : nil
+                let subject: ChatControllerSubject? = messageId != 0 ? .message(id: .id(EngineMessage.Id(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: messageId)), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false) : nil
                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peer), subject: subject))
             }
         }
