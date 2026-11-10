@@ -59,7 +59,7 @@ public enum LumenHooks {
     /// is non-zero, the meme was saved from that message (in `sourceDialogId`): its media is
     /// resent by reference — instant, no re-upload — falling back to uploading `path` when the
     /// source is gone. `replyToMessageId` (non-zero) posts it as a reply in the target chat.
-    public static var sendMeme: ((_ accountPeerId: Int64, _ dialogId: Int64, _ replyToMessageId: Int32, _ sourceDialogId: Int64, _ sourceMessageId: Int32, _ path: String, _ kind: String, _ caption: String) -> Void)?
+    public static var sendMeme: ((_ accountPeerId: Int64, _ dialogId: Int64, _ replyToMessageId: Int32, _ sourceDialogId: Int64, _ sourceMessageId: Int32, _ mediaBlob: String, _ path: String, _ kind: String, _ caption: String) -> Void)?
 
     /// Downloads a message's media to a file and calls back with its path (nil if there is no
     /// downloadable media or it failed). `sourceDialogId`/`sourceMessageId` is the message.

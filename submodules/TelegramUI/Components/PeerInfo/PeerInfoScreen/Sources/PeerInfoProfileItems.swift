@@ -917,6 +917,19 @@ func infoItems(
     
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
+    // MARK: Lumen: plugin profile buttons at the top (LumenProfileActions).
+    let lumenActions = LumenProfileActions.visible(isMyProfile: isMyProfile)
+    if !lumenActions.isEmpty, let lumenPeer = data.peer {
+        let lumenUserId = lumenDialogId(peerId: lumenPeer.id)
+        var lumenItems: [PeerInfoScreenItem] = []
+        for pluginAction in lumenActions {
+            let icon = pluginAction.iconName.flatMap { UIImage(systemName: $0)?.withRenderingMode(.alwaysTemplate) }
+            lumenItems.append(PeerInfoScreenActionItem(id: "lumen_\(pluginAction.pluginId)_\(pluginAction.id)", text: pluginAction.title, color: .accent, icon: icon, action: {
+                LumenProfileActions.perform?(pluginAction.pluginId, pluginAction.id, lumenUserId)
+            }))
+        }
+        result.append(("lumenProfileActions", lumenItems))
+    }
     for section in InfoSection.allCases {
         if let sectionItems = items[section], !sectionItems.isEmpty {
             result.append((section, sectionItems))

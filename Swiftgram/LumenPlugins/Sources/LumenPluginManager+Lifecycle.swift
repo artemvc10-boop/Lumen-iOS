@@ -65,6 +65,7 @@ extension LumenPluginManager {
         if !self.loaded.contains(id) {
             return
         }
+        self.clearProfileActions(pluginId: id)
         if LumenPluginManager.nativePluginIds.contains(id) {
             self.nativeHandlers[id] = nil
         } else {

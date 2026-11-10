@@ -359,7 +359,7 @@ struct LumenMemeLibraryView: View {
             // Resend by reference when the meme was saved from a message (instant, no re-upload);
             // reply to the composed message when one is set.
             if LumenHooks.sendMeme != nil {
-                LumenHooks.sendMeme?(self.accountPeerId, self.dialogId, self.replyToMessageId, meme.sourceDialogId, meme.sourceMessageId, url.path, kind, "")
+                LumenHooks.sendMeme?(self.accountPeerId, self.dialogId, self.replyToMessageId, meme.sourceDialogId, meme.sourceMessageId, meme.mediaBlob, url.path, kind, "")
             } else {
                 LumenHooks.sendFile?(self.accountPeerId, self.dialogId, url.path, kind, "")
             }

@@ -149,8 +149,36 @@ private func lumenSendableMedia(_ message: Message) -> Media? {
     return nil
 }
 
+/// Serializes a message media (photo/video/document) to base64, so a meme can be resent by
+/// reference later without the original message still being in the cache.
+public func lumenSerializeMedia(_ media: Media) -> String? {
+    guard media is TelegramMediaImage || media is TelegramMediaFile else {
+        return nil
+    }
+    let encoder = PostboxEncoder()
+    encoder.encodeRootObject(media)
+    return encoder.makeData().base64EncodedString()
+}
+
+/// The resendable media of a message's media list (photo/video/document), serialized.
+public func lumenSerializeMessageMedia(_ mediaList: [Media]) -> String? {
+    for media in mediaList {
+        if let blob = lumenSerializeMedia(media) {
+            return blob
+        }
+    }
+    return nil
+}
+
+private func lumenDeserializeMedia(_ blob: String) -> Media? {
+    guard let data = Data(base64Encoded: blob) else {
+        return nil
+    }
+    return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Media
+}
+
 /// Sends a meme, reusing its original upload when the source message is still around.
-func lumenSendMeme(accountPeerId: Int64, dialogId: Int64, replyToMessageId: Int32, sourceDialogId: Int64, sourceMessageId: Int32, path: String, kind: String, caption: String) {
+func lumenSendMeme(accountPeerId: Int64, dialogId: Int64, replyToMessageId: Int32, sourceDialogId: Int64, sourceMessageId: Int32, mediaBlob: String, path: String, kind: String, caption: String) {
     guard let account = lumenAccounts.with({ $0[PeerId(accountPeerId)]?.account }) else {
         return
     }
@@ -159,7 +187,8 @@ func lumenSendMeme(accountPeerId: Int64, dialogId: Int64, replyToMessageId: Int3
             return nil
         }
         let reply = lumenReplySubject(peerId: peerId, replyToMessageId: replyToMessageId)
-        // Resend by reference when the meme came from a message that is still present.
+        // Best: resend by reference from the original message when it is still cached
+        // (lets the file reference be refreshed if it went stale).
         if sourceMessageId != 0, let sourcePeerId = lumenResolveDialog(transaction: transaction, dialogId: sourceDialogId) {
             let sourceId = MessageId(peerId: sourcePeerId, namespace: Namespaces.Message.Cloud, id: sourceMessageId)
             if let sourceMessage = transaction.getMessage(sourceId), let media = lumenSendableMedia(sourceMessage) {
@@ -168,7 +197,12 @@ func lumenSendMeme(accountPeerId: Int64, dialogId: Int64, replyToMessageId: Int3
                 return (peerId, message)
             }
         }
-        // Otherwise upload the local file.
+        // Next: resend by reference from the media saved with the meme (no message needed).
+        if !mediaBlob.isEmpty, let media = lumenDeserializeMedia(mediaBlob) {
+            let message = EnqueueMessage.message(text: caption, attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), threadId: nil, replyToMessageId: reply, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+            return (peerId, message)
+        }
+        // Last: upload the local file.
         guard let fileMessage = lumenFileMessage(account: account, path: path, kind: kind, caption: caption) else {
             return nil
         }
@@ -310,8 +344,8 @@ func lumenRegisterAccount(_ account: Account) {
         }
     }
     if LumenHooks.sendMeme == nil {
-        LumenHooks.sendMeme = { accountPeerId, dialogId, replyToMessageId, sourceDialogId, sourceMessageId, path, kind, caption in
-            lumenSendMeme(accountPeerId: accountPeerId, dialogId: dialogId, replyToMessageId: replyToMessageId, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId, path: path, kind: kind, caption: caption)
+        LumenHooks.sendMeme = { accountPeerId, dialogId, replyToMessageId, sourceDialogId, sourceMessageId, mediaBlob, path, kind, caption in
+            lumenSendMeme(accountPeerId: accountPeerId, dialogId: dialogId, replyToMessageId: replyToMessageId, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId, mediaBlob: mediaBlob, path: path, kind: kind, caption: caption)
         }
     }
     if LumenHooks.downloadMessageMedia == nil {

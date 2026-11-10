@@ -343,7 +343,14 @@ final class LumenPluginScreenController: UIHostingController<LumenPluginScreenVi
         super.init(rootView: LumenPluginScreenView(model: model, close: close))
         self.modalPresentationStyle = .pageSheet
         if let sheet = self.sheetPresentationController {
-            sheet.detents = [.large()]
+            // A "medium" detent leaves the screen behind (e.g. a profile) visible so plugin
+            // changes show live while editing.
+            if (model.spec["detent"] as? String) == "medium" {
+                sheet.detents = [.medium(), .large()]
+                sheet.largestUndimmedDetentIdentifier = .medium
+            } else {
+                sheet.detents = [.large()]
+            }
             sheet.prefersGrabberVisible = true
         }
     }

@@ -26,3 +26,22 @@ def clear(user_id=None):
         native("decorationClear", all=True)
     else:
         native("decorationClear", userId=int(user_id))
+
+
+def add_action(title, on_click, icon=None, own_only=True, action_id=None):
+    """Add a button to the top of a profile screen. on_click(user_id) is called on tap.
+
+    `icon` is an SF Symbol name (e.g. "paintbrush"); `own_only` shows it only on your own
+    profile. Buttons appear next time a profile opens.
+    """
+    import _lumen_host
+    if action_id is None:
+        action_id = "act_" + str(abs(hash(title)) % 1000000)
+    cb = _lumen_host.register_view_callback(lambda user_id=0: on_click(user_id))
+    native("addProfileAction", id=str(action_id), title=str(title), icon=icon,
+           ownOnly=bool(own_only), callback=cb)
+    return action_id
+
+
+def clear_actions():
+    native("clearProfileActions")

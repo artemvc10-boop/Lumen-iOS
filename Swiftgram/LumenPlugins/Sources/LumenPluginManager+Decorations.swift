@@ -6,6 +6,16 @@ import SGSimpleSettings
 
 extension LumenPluginManager {
     func installDecorationHooks() {
+        LumenProfileActions.perform = { [weak self] pluginId, id, userId in
+            self?.queue.async {
+                guard let self, let callbackId = self.profileActionCallbacks[pluginId + "/" + id] else {
+                    return
+                }
+                self.activeAccountPeerId = self.activeAccountPeerId != 0 ? self.activeAccountPeerId : self.primaryAccountPeerId
+                LumenAppActions.currentChatDialogId = userId
+                self.fireCallback(callbackId, args: [userId])
+            }
+        }
         LumenHooks.profileOpened = { [weak self] userId in
             self?.queue.async {
                 self?.deliverDecorationEvent(["kind": "profile", "userId": userId])
@@ -147,5 +157,28 @@ extension LumenPluginManager {
                 finish(["ok": false, "status": status, "error": error.localizedDescription])
             }
         }.resume()
+    }
+
+    /// addProfileAction {id, title, icon, ownOnly, callback}: a button plugins show at the top
+    /// of a profile (see LumenProfileActions).
+    func addProfileAction(pluginId: String, _ arg: [String: Any]) {
+        guard let id = arg["id"] as? String, let title = arg["title"] as? String else {
+            return
+        }
+        let ownOnly = (arg["ownOnly"] as? Bool) ?? true
+        let iconName = arg["icon"] as? String
+        if let callback = (arg["callback"] as? NSNumber)?.intValue {
+            self.profileActionCallbacks[pluginId + "/" + id] = callback
+        }
+        var actions = LumenProfileActions.actions.filter { !($0.pluginId == pluginId && $0.id == id) }
+        actions.append(LumenProfileAction(pluginId: pluginId, id: id, title: title, iconName: iconName, ownProfileOnly: ownOnly))
+        LumenProfileActions.actions = actions
+    }
+
+    func clearProfileActions(pluginId: String) {
+        LumenProfileActions.actions = LumenProfileActions.actions.filter { $0.pluginId != pluginId }
+        for key in self.profileActionCallbacks.keys where key.hasPrefix(pluginId + "/") {
+            self.profileActionCallbacks[key] = nil
+        }
     }
 }

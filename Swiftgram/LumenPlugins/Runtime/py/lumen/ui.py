@@ -80,8 +80,11 @@ def section(rows=None, header=None, footer=None):
     return {"header": header, "footer": footer, "rows": rows or []}
 
 
-def screen(title, sections=None, search=None, toolbar=None, bottom_button=None):
-    return {"title": title, "sections": sections or [], "search": search, "toolbar": toolbar or [], "bottomButton": bottom_button}
+def screen(title, sections=None, search=None, toolbar=None, bottom_button=None, detent=None):
+    spec = {"title": title, "sections": sections or [], "search": search, "toolbar": toolbar or [], "bottomButton": bottom_button}
+    if detent:
+        spec["detent"] = detent
+    return spec
 
 
 def toolbar_item(icon, item_id=None, on_click=None):

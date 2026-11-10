@@ -55,8 +55,11 @@ public struct LumenPluginMessageContext {
     /// A message in this chat the user is replying to (0 = none). Set when a chat action
     /// opens while a reply is being composed.
     public let replyToMessageId: Int32
+    /// The message's primary media, serialized (base64), so plugins can resend it by
+    /// reference later without the original message. Empty when there is none.
+    public let mediaBlob: String
 
-    public init(accountPeerId: Int64, dialogId: Int64, messageId: Int32, text: String, hasMedia: Bool, mediaPath: String? = nil, replyToMessageId: Int32 = 0) {
+    public init(accountPeerId: Int64, dialogId: Int64, messageId: Int32, text: String, hasMedia: Bool, mediaPath: String? = nil, replyToMessageId: Int32 = 0, mediaBlob: String = "") {
         self.accountPeerId = accountPeerId
         self.dialogId = dialogId
         self.messageId = messageId
@@ -64,6 +67,7 @@ public struct LumenPluginMessageContext {
         self.hasMedia = hasMedia
         self.mediaPath = mediaPath
         self.replyToMessageId = replyToMessageId
+        self.mediaBlob = mediaBlob
     }
 }
 
@@ -130,6 +134,8 @@ public final class LumenPluginManager: ObservableObject {
         }
     }
     var primaryAccountPeerId: Int64 = 0
+    /// "<pluginId>/<actionId>" -> host callback id for profile buttons (LumenProfileActions).
+    var profileActionCallbacks: [String: Int] = [:]
     /// Native plugins (the meme library) register here to receive menu clicks.
     var nativeHandlers: [String: LumenNativePlugin] = [:]
 

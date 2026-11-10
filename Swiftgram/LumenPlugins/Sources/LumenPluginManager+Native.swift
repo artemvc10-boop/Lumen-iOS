@@ -61,6 +61,12 @@ extension LumenPluginManager {
         case "downloadMessageMedia":
             self.handleDownloadMessageMedia(arg)
             return nil
+        case "addProfileAction":
+            self.addProfileAction(pluginId: pluginId, arg)
+            return nil
+        case "clearProfileActions":
+            self.clearProfileActions(pluginId: pluginId)
+            return nil
         case "getSetting":
             return self.settingValue(pluginId: pluginId, key: arg["key"] as? String ?? "")
         case "setSetting":

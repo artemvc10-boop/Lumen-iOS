@@ -1607,7 +1607,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }, action: { _, f in
                     f(.default)
                     let mediaPath = lumenCopyMessageMedia(context: lumenAccountContext, message: lumenMessage)
-                    let pluginContext = LumenPluginMessageContext(accountPeerId: accountPeerId, dialogId: dialogId, messageId: lumenMessage.id.id, text: lumenMessage.text, hasMedia: hasMedia, mediaPath: mediaPath)
+                    let mediaBlob = lumenSerializeMessageMedia(lumenMessage.media) ?? ""
+                    let pluginContext = LumenPluginMessageContext(accountPeerId: accountPeerId, dialogId: dialogId, messageId: lumenMessage.id.id, text: lumenMessage.text, hasMedia: hasMedia, mediaPath: mediaPath, mediaBlob: mediaBlob)
                     LumenPluginManager.shared.performMenuItem(pluginItem, context: pluginContext)
                 })))
             }

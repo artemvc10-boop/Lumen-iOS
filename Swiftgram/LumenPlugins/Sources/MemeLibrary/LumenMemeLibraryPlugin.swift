@@ -49,7 +49,7 @@ final class LumenMemeLibraryPlugin: LumenNativePlugin {
                 LumenToast.show("Файл не найден. Откройте медиа, чтобы оно скачалось.", kind: .error)
                 return
             }
-            self.presentSaveForm(url: URL(fileURLWithPath: path), sourceDialogId: context.dialogId, sourceMessageId: context.messageId)
+            self.presentSaveForm(url: URL(fileURLWithPath: path), sourceDialogId: context.dialogId, sourceMessageId: context.messageId, mediaBlob: context.mediaBlob)
         case .library:
             self.openLibrary(dialogId: context.dialogId, accountPeerId: context.accountPeerId, replyToMessageId: context.replyToMessageId)
         }
@@ -74,12 +74,12 @@ final class LumenMemeLibraryPlugin: LumenNativePlugin {
     }
 
     @available(iOS 15.0, *)
-    private func presentSaveForm(url: URL, sourceDialogId: Int64 = 0, sourceMessageId: Int32 = 0) {
+    private func presentSaveForm(url: URL, sourceDialogId: Int64 = 0, sourceMessageId: Int32 = 0, mediaBlob: String = "") {
         let store = self.store
         store.reload()
         let view = LumenMemeFormView(title: "Сохранить в мемы", imageURL: url, categories: store.categories, category: "", description: "") { category, description in
             do {
-                try store.add(source: url, category: category, description: description, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId)
+                try store.add(source: url, category: category, description: description, sourceDialogId: sourceDialogId, sourceMessageId: sourceMessageId, mediaBlob: mediaBlob)
                 LumenToast.show("Мем сохранён!", kind: .success)
             } catch LumenMemeStore.SaveError.categoryLimit {
                 LumenToast.show("Лимит категорий (\(LumenMemeStore.maxCategories)) достигнут", kind: .error)
