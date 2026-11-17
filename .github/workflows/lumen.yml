@@ -3,6 +3,10 @@ name: Lumen iOS
 on:
   workflow_dispatch:
     inputs:
+      publish_release:
+        description: 'Publish the IPA as a GitHub release'
+        type: boolean
+        default: true
       configuration:
         description: 'Device build configuration'
         type: choice
@@ -131,7 +135,7 @@ jobs:
           retention-days: 30
 
       - name: Publish release
-        if: success()
+        if: success() && inputs.publish_release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

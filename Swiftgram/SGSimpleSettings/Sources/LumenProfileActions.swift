@@ -25,7 +25,14 @@ public struct LumenProfileAction: Equatable {
 
 public enum LumenProfileActions {
     /// Updated by the plugin engine whenever a plugin adds or removes a profile button.
-    public static var actions: [LumenProfileAction] = []
+    public static let didChangeNotification = Notification.Name("LumenProfileActionsDidChange")
+    public static var actions: [LumenProfileAction] = [] {
+        didSet {
+            if oldValue != self.actions {
+                NotificationCenter.default.post(name: self.didChangeNotification, object: nil)
+            }
+        }
+    }
 
     /// Invoked on the main queue when a profile button is tapped. `userId` is the profile's
     /// Android-style id. Installed by the plugin engine.

@@ -170,13 +170,19 @@ extension LumenPluginManager {
         if let callback = (arg["callback"] as? NSNumber)?.intValue {
             self.profileActionCallbacks[pluginId + "/" + id] = callback
         }
-        var actions = LumenProfileActions.actions.filter { !($0.pluginId == pluginId && $0.id == id) }
-        actions.append(LumenProfileAction(pluginId: pluginId, id: id, title: title, iconName: iconName, ownProfileOnly: ownOnly))
-        LumenProfileActions.actions = actions
+        let action = LumenProfileAction(pluginId: pluginId, id: id, title: title, iconName: iconName, ownProfileOnly: ownOnly)
+        DispatchQueue.main.async {
+            var actions = LumenProfileActions.actions
+            actions.removeAll { $0.pluginId == pluginId && $0.id == id }
+            actions.append(action)
+            LumenProfileActions.actions = actions
+        }
     }
 
     func clearProfileActions(pluginId: String) {
-        LumenProfileActions.actions = LumenProfileActions.actions.filter { $0.pluginId != pluginId }
+        DispatchQueue.main.async {
+            LumenProfileActions.actions = LumenProfileActions.actions.filter { $0.pluginId != pluginId }
+        }
         for key in self.profileActionCallbacks.keys where key.hasPrefix(pluginId + "/") {
             self.profileActionCallbacks[key] = nil
         }

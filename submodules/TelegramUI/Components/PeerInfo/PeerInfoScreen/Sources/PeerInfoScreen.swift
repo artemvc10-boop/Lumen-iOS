@@ -232,6 +232,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var lumenBackgroundRevision = -1
     private var lumenRevision = 0
     private var lumenDecorationObserver: NSObjectProtocol?
+    private var lumenProfileActionsObserver: NSObjectProtocol?
 
     let context: AccountContext
     let peerId: EnginePeer.Id
@@ -534,6 +535,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.lumenRevision += 1
             self.updatePresentationData(controller.presentationData)
         })
+
+        self.lumenProfileActionsObserver = NotificationCenter.default.addObserver(forName: LumenProfileActions.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self, let (layout, navigationHeight) = self.validLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+        }
 
         self.paneContainerNode.parentController = controller
 
@@ -2738,6 +2746,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     deinit {
+        if let lumenProfileActionsObserver = self.lumenProfileActionsObserver {
+            NotificationCenter.default.removeObserver(lumenProfileActionsObserver)
+        }
         if let lumenDecorationObserver = self.lumenDecorationObserver {
             NotificationCenter.default.removeObserver(lumenDecorationObserver)
         }
@@ -5746,7 +5757,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
               
             var isFirst = true
-            for (sectionId, sectionItems) in items {
+            for (sectionId, sectionItems) in self.lumenProfileActionSections() + items {
                 let isFirstSection = isFirst
                 isFirst = false
                 validRegularSections.append(sectionId)
@@ -5815,7 +5826,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             var validEditingSections: [AnyHashable] = []
             let editItems = (self.isSettings || self.isMyProfile) ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isMyProfile: self.isMyProfile) : editingItems(data: self.data, boostStatus: self.boostStatus, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction)
 
-            for (sectionId, sectionItems) in editItems {
+            for (sectionId, sectionItems) in self.lumenProfileActionSections() + editItems {
                 var insets = UIEdgeInsets()
                 insets.left += sideInsets.sectionLeft
                 insets.right += sideInsets.sectionRight
@@ -6083,6 +6094,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
+    private func lumenProfileActionSections() -> [(AnyHashable, [PeerInfoScreenItem])] {
+        let actions = LumenProfileActions.visible(isMyProfile: self.peerId == self.context.account.peerId)
+        guard !actions.isEmpty else {
+            return []
+        }
+        let userId = lumenDialogId(peerId: self.peerId)
+        let items: [PeerInfoScreenItem] = actions.map { action in
+            let icon = action.iconName.flatMap { UIImage(systemName: $0)?.withRenderingMode(.alwaysTemplate) }
+            return PeerInfoScreenActionItem(id: "lumen_\(action.pluginId)_\(action.id)", text: action.title, icon: icon, action: {
+                LumenProfileActions.perform?(action.pluginId, action.id, userId)
+            })
+        }
+        return [("lumenProfileActions", items)]
+    }
+
     private func updateBackgroundColor() {
         let color: UIColor
         if self.paneContainerNode.currentPaneKey == .gifts {
